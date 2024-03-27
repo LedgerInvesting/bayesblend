@@ -19,6 +19,7 @@ jobs:
 
       - name: Install and cache dependencies
         run: |
+          poetry install
       - name: cmdstan env vars
         run: |
           echo "CMDSTAN_PATH=${HOME}/.cmdstan" >> $GITHUB_ENV
