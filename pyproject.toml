@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "bayesblend"
+version = "0.1.0"
+description = "Easy to use Bayesian Model Averaging and Bayesian Stacking for all your model blending needs!"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+cmdstanpy = "^1.2.1"
+scipy = "^1.12.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

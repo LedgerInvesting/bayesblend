@@ -1,0 +1,19 @@
+# macOS 
+.DS_Store
+
+# python
+__pycache__
+*.pyc
+.mypy_cache
+.pytest_cache
+poetry.lock
+
+# stan
+**/stan_files/*
+!**/stan_files/*.stan
+
+# VScode
+.vscode
+
+# asdf
+.tool-versions
