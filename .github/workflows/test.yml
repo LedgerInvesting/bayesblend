@@ -14,10 +14,12 @@ jobs:
         with:
           python-version: 3.11
 
+      - name: Install poetry
+        run: pipx install poetry
+
       - name: Install and cache dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .
+          poetry install
       - name: cmdstan env vars
         run: |
           echo "CMDSTAN_PATH=${HOME}/.cmdstan" >> $GITHUB_ENV
@@ -33,4 +35,4 @@ jobs:
         run: |
           install_cmdstan -v ${{ env.CMDSTAN_VERSION }} --progress
       - name: Test
-        run: pytest test
+        run: poetry run pytest
