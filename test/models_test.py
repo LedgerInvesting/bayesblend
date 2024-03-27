@@ -1,5 +1,6 @@
 import json
 from functools import lru_cache
+from typing import Dict
 
 import numpy as np
 import pytest
@@ -10,11 +11,7 @@ from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, Ps
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
 
-CFG = {
-    "chains": 4,
-    "parallel_chains": 4,
-    "seed": 1234,
-}
+CFG: Dict = {"chains": 4, "parallel_chains": 4, "seed": 1234}
 
 
 def compute_lpd(log_lik: np.ndarray) -> np.ndarray:
