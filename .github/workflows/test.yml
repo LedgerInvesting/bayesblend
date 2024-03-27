@@ -8,11 +8,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Python3
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: "3.11"
 
       - name: Install poetry
         run: pipx install poetry
@@ -26,14 +26,13 @@ jobs:
           echo "CMDSTAN_VERSION=2.33.1" >> $GITHUB_ENV
         shell: bash
       - name: Cache cmdstan
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ env.CMDSTAN_PATH }}
           key: ${{ runner.os }}-cmdstan-${{ env.CMDSTAN_VERSION }}
           restore-keys: ${{ runner.os }}-cmdstan-
       - name: Install cmdstan
         run: |
-          poetry shell
           install_cmdstan -v ${{ env.CMDSTAN_VERSION }} --progress
       - name: Test
         run: poetry run pytest
