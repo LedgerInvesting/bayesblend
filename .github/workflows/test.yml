@@ -17,7 +17,6 @@ jobs:
       - name: Install and cache dependencies
         run: |
           python -m pip install --upgrade pip
-          make login
           pip install .
       - name: cmdstan env vars
         run: |
