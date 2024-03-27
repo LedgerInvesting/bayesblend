@@ -33,6 +33,6 @@ jobs:
           restore-keys: ${{ runner.os }}-cmdstan-
       - name: Install cmdstan
         run: |
-          install_cmdstan -v ${{ env.CMDSTAN_VERSION }} --progress
+          poetry run python -m cmdstanpy.install_cmdstan -v ${{ env.CMDSTAN_VERSION }} --progress
       - name: Test
         run: poetry run pytest
