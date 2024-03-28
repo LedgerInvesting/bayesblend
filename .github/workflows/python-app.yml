@@ -9,6 +9,21 @@ on:
       - main
 
 jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs: 
+      any-modified-files: ${{ steps.changed-py-files.outputs.any_changed }}
+      modified-files: ${{ steps.changed-py-files.outputs.all_changed_files }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Python changed files
+        id: changed-py-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            *.py
+            **/*.py
+
   tests:
     runs-on: ubuntu-latest
     steps:
@@ -19,7 +34,7 @@ jobs:
           python-version: "3.11"
       - name: Install poetry
         run: pipx install poetry
-      - name: Install and cache dependencies
+      - name: Install dependencies
         run: |
           poetry env use "3.11"
           poetry install
@@ -44,6 +59,7 @@ jobs:
 
   mypy:
     runs-on: ubuntu-latest
+    needs: meta
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -51,18 +67,10 @@ jobs:
         python-version: "3.11"
     - name: Install poetry
       run: pipx install poetry
-    - name: Install and cache dependencies
+    - name: Install dependencies
       run: |
           poetry env use "3.11"
           poetry install 
-    - name: Get Python changed files
-      id: changed-py-files
-      uses: tj-actions/changed-files@v44
-      with:
-        files: |
-          *.py
-          **/*.py
     - name: Run if any .py files changed
-      if: steps.changed-py-files.outputs.any_changed == 'true'
-      run: poetry run mypy ${{ steps.changed-py-files.outputs.all_changed_files }} --ignore-missing-imports
-
+      if: ${{ needs.meta.outputs.changed-py-files.outputs.any_changed == 'true' }}
+      run: poetry run mypy ${{ needs.meta.outputs.changed-py-files.outputs.all_changed_files }} --ignore-missing-imports
