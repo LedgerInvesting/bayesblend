@@ -802,7 +802,8 @@ class HierarchicalBayesStacking(BayesBlendModel):
 class PseudoBma(BayesBlendModel):
     """Subclass to compute model weights by pseudo Bayesian model averaging (pseudo-BMA).
 
-    Information criteria weights are derived by a simple rescaling procedure
+    This method computes information criteria (IC) from the pointwise diagnostics,
+    and IC weights are then derived by a simple rescaling procedure
     (computing the differences between each IC and the maximum IC) and running the
     rescaled values through a softmax function. This procedure is referred to as
     pseudo Bayesian model averaging (BMA), whereas traditional BMA weights models
