@@ -26,12 +26,14 @@ jobs:
           echo "CMDSTAN_VERSION=2.33.1" >> $GITHUB_ENV
         shell: bash
       - name: Cache cmdstan
+        id: cache
         uses: actions/cache@v3
         with:
           path: ${{ env.CMDSTAN_PATH }}
           key: ${{ runner.os }}-cmdstan-${{ env.CMDSTAN_VERSION }}
           restore-keys: ${{ runner.os }}-cmdstan-
       - name: Install cmdstan
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           poetry run python -m cmdstanpy.install_cmdstan -v ${{ env.CMDSTAN_VERSION }} --progress
       - name: Test
