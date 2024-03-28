@@ -14,13 +14,13 @@ model {
       y ~ bernoulli(theta);
 }
 generated quantities {
-  array[N] int y_rep;
+  array[N] int post_pred;
   real log_joint_prior;
   vector[N] log_lik;
 
   for (n in 1:N){
     log_lik[n] = bernoulli_lpmf(y[n] | theta);
-    y_rep[n] = bernoulli_rng(theta);
+    post_pred[n] = bernoulli_rng(theta);
   }
   
   log_joint_prior = beta_lpdf(theta | 1, 1);
