@@ -3,8 +3,9 @@ from __future__ import annotations
 import typing
 import warnings
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -40,7 +41,7 @@ CovariateInfo = Dict[str, Union[Set[Any], Dict[str, float]]]
 
 Weights = Dict[str, np.ndarray]
 
-Priors = Dict[str, Union[Sequence, float, int]]
+Priors = Dict[str, Union[List[Union[float, int]], float, int]]
 
 CMDSTAN_DEFAULTS = {
     "chains": 4,
@@ -75,9 +76,9 @@ class BayesBlendModel(ABC):
         pointwise_diagnostics: PointwiseDiagnostics,
     ) -> None:
         self.pointwise_diagnostics = pointwise_diagnostics
-        self._coefficients: Optional[Dict[str, np.ndarray]] = None
-        self._weights: Optional[Weights] = None
-        self._model_info: Optional[Union[OptimizeResult, CmdStanMCMC]] = None
+        self._coefficients: Dict[str, np.ndarray]
+        self._weights: Weights | None = None
+        self._model_info: Union[OptimizeResult, CmdStanMCMC] | None = None
 
     @abstractmethod
     def fit(self) -> BayesBlendModel:
@@ -100,35 +101,101 @@ class BayesBlendModel(ABC):
         return self.__class__.__name__
 
     @property
-    def weights(self) -> Optional[Weights]:
+    def weights(self) -> Weights:
         """Return a dictionary of weights.
 
         For Bayesian models, this property returns the
         mean posterior weights for simplicty.
         """
         if self._weights is None:
-            # If there are no estimated weights yet, return None
-            return None
+            return {}
         return {
             model: np.mean(weight, axis=0, keepdims=True)
             for model, weight in self._weights.items()
         }
 
     @property
-    def coefficients(self) -> Optional[Dict[str, np.ndarray]]:
+    def coefficients(self) -> Dict[str, np.ndarray]:
         """Return the model coefficients, if any."""
-        if self._coefficients is None:
+        if not self._coefficients:
             warnings.warn(f"{self.model_name} does have any coefficients.")
-            return None
+            return {}
         return {
             name: np.mean(value, axis=0, keepdims=True)
             for name, value in self._coefficients.items()
         }
 
     @property
-    def model_info(self) -> Optional[Union[OptimizeResult, CmdStanMCMC]]:
+    def model_info(self) -> Union[OptimizeResult, CmdStanMCMC] | None:
         """Return the fitted model information."""
         return self._model_info
+
+    def blend(
+        self,
+        draws: Dict[str, Dict[str, np.ndarray]],
+        seed: int | None = None,
+    ):
+        """Blend draws from multiple models given model-based weights.
+
+        Args:
+            draws: Dictionary with model-value pairs, where values are dictionaries of
+                postererior arrays to be blended. For example,
+                {"model1": {"y_pred": np.ndarray, "log_lik": np.ndarray, ...}}. Each
+                underlying array should have the form SxN, where S is the number of
+                MCMC samples and N is the number of datapoints. Array dimensions should
+                match across models and values.
+            seed: Random number seed to blending arrays. Defaults to None.
+
+        Returns:
+            Dictionary of blended draws (across models) for each value.
+        """
+        np.random.seed(seed)
+
+        M = len(draws)
+        S = np.shape(list(list(draws.values())[0].values())[0])[0]
+        N = np.shape(list(list(draws.values())[0].values()))[-1]
+
+        # ensure same number of posterior samples
+        for model, vals in draws.items():
+            for par, s in vals.items():
+                if np.shape(s)[0] != S:
+                    raise ValueError(
+                        "The number of MCMC samples in `draws` is not consistent"
+                    )
+
+        # use array to deal with multiple possible weights across observations
+        weight_array = np.concatenate(list(self.weights.values())).T
+        draws_idx_list = [
+            np.random.choice(list(range(M)), S, p=weights) for weights in weight_array
+        ]
+
+        if len(draws_idx_list) != 1 and len(draws_idx_list) != N:
+            raise ValueError(
+                "Dimensions of `weights` do not match those of `draws`. Either a single "
+                "set of weights should be supplied that will be applied to all observations "
+                "in `draws`, or exactly one set of weights for each observation in `draws` "
+                "should be supplied for pointwise blending."
+            )
+
+        if len(draws_idx_list) == 1:
+            draws_idx_list = draws_idx_list * N
+
+        blend: Dict = defaultdict(List[float])
+        blend_idx = {i: j for i, j in zip(draws.keys(), range(M))}
+        for model, vals in draws.items():
+            blend_id = blend_idx[model]
+            for par, s in vals.items():
+                blended_list = [
+                    list(s[draws_idx == blend_id, idx])
+                    for idx, draws_idx in enumerate(draws_idx_list)
+                ]
+                if par in blend:
+                    curr = blend[par]
+                    blend[par] = [c + b for c, b in zip(curr, blended_list)]
+                else:
+                    blend[par] = blended_list
+
+        return {par: np.asarray(blend[par]).T for par in blend}
 
 
 class MleStacking(BayesBlendModel):
@@ -146,7 +213,7 @@ class MleStacking(BayesBlendModel):
     def __init__(
         self,
         pointwise_diagnostics: PointwiseDiagnostics,
-        optimizer_options: Optional[Dict[str, Any]] = None,
+        optimizer_options: Dict[str, Any] | None = None,
     ) -> None:
         self.optimizer_options = optimizer_options
         super().__init__(pointwise_diagnostics)
@@ -216,9 +283,9 @@ class BayesStacking(BayesBlendModel):
     def __init__(
         self,
         pointwise_diagnostics: PointwiseDiagnostics,
-        priors: Optional[Priors] = None,
-        cmdstan_control: Optional[Dict[str, Optional[Any]]] = None,
-        seed: Optional[int] = None,
+        priors: Priors | None = None,
+        cmdstan_control: Dict[str, Any] | None = None,
+        seed: int | None = None,
     ) -> None:
         super().__init__(pointwise_diagnostics)
         self.cmdstan_control = (
@@ -228,7 +295,7 @@ class BayesStacking(BayesBlendModel):
         )
 
         if priors is None:
-            self._priors = {
+            self._priors: Priors = {
                 "w_prior": [1] * self.num_models,
             }
         else:
@@ -237,7 +304,9 @@ class BayesStacking(BayesBlendModel):
                     "`priors` should be a dictionary of one key-value pair "
                     "of the weights `w_prior` and vector of shapes, e.g. ('w_prior', [1, 1, 1])."
                 )
-            if len(priors["w_prior"]) != self.num_models:
+            if isinstance(priors["w_prior"], (float, int)):
+                priors["w_prior"] = [priors["w_prior"]] * self.num_models
+            elif len(priors["w_prior"]) != self.num_models:
                 raise ValueError(
                     f"Length of `w_prior` prior vector ({len(priors['w_prior'])}) "
                     f"does not equal the number of models ({self.num_models})."
@@ -367,14 +436,14 @@ class HierarchicalBayesStacking(BayesBlendModel):
     def __init__(
         self,
         pointwise_diagnostics: PointwiseDiagnostics,
-        discrete_covariates: Optional[Dict[str, Sequence]] = None,
-        continuous_covariates: Optional[Dict[str, Sequence]] = None,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates_transform: ContinuousTransforms = "standardize",
         partial_pooling: bool = False,
         adaptive: bool = False,
-        priors: Optional[Priors] = None,
-        cmdstan_control: Optional[Dict[str, Any]] = None,
-        seed: Optional[int] = None,
+        priors: Priors | None = None,
+        cmdstan_control: Dict[str, Any] | None = None,
+        seed: int | None = None,
     ) -> None:
         if not discrete_covariates and not continuous_covariates:
             raise ValueError(
@@ -430,9 +499,9 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
     def _prepare_covariates(
         self,
-        discrete_covariates: Optional[Dict[str, Sequence]] = None,
-        continuous_covariates: Optional[Dict[str, Sequence]] = None,
-        covariate_info: Optional[CovariateInfo] = None,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
+        covariate_info: CovariateInfo | None = None,
     ) -> Tuple[np.ndarray, np.ndarray]:
         if discrete_covariates is None and continuous_covariates is None:
             raise ValueError(
@@ -510,8 +579,8 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
     def _get_covariate_info(
         self,
-        discrete_covariates: Optional[Dict[str, Sequence]] = None,
-        continuous_covariates: Optional[Dict[str, Sequence]] = None,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> CovariateInfo:
         discrete_covariate_set = (
             {k: set(v) for k, v in discrete_covariates.items()}
@@ -530,8 +599,8 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
     def _validate_prediction_covariates(
         self,
-        discrete_covariates: Optional[Dict[str, Sequence]] = None,
-        continuous_covariates: Optional[Dict[str, Sequence]] = None,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> None:
         pred_covariate_info = self._get_covariate_info(
             discrete_covariates, continuous_covariates
@@ -649,8 +718,8 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
     def predict(
         self,
-        discrete_covariates: Optional[Dict[str, Sequence]] = None,
-        continuous_covariates: Optional[Dict[str, Sequence]] = None,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> Dict[str, np.ndarray]:
         self._validate_prediction_covariates(discrete_covariates, continuous_covariates)
 
@@ -659,7 +728,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         )
         X = _concat_array_empty([discrete, continuous], axis=1)
 
-        N_MCMC = self._coefficients["alpha"].shape[0]  # type: ignore
+        N_MCMC = self._coefficients["alpha"].shape[0]
         N_NEW_LEVELS = (
             (discrete.shape[1] - self.coefficients["beta_disc"].shape[2])
             if discrete.size > 0
@@ -700,7 +769,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
                     np.atleast_2d(
                         [
                             a + np.dot(X, b)
-                            for a, b in zip(self._coefficients["alpha"][i], Beta)  # type: ignore
+                            for a, b in zip(self._coefficients["alpha"][i], Beta)
                         ]
                     ),
                     np.atleast_2d(np.zeros(X.shape[0])),
@@ -733,6 +802,23 @@ class HierarchicalBayesStacking(BayesBlendModel):
 class PseudoBma(BayesBlendModel):
     """Subclass to compute model weights by pseudo Bayesian model averaging (pseudo-BMA).
 
+    Information criteria weights are derived by a simple rescaling procedure
+    (computing the differences between each IC and the maximum IC) and running the
+    rescaled values through a softmax function. This procedure is referred to as
+    pseudo Bayesian model averaging (BMA), whereas traditional BMA weights models
+    by their marginal likelihoods (the denominator in Bayes' rule). However, the
+    marginal likelihood is non-trivial to calculate from most models.
+
+    The `bootstrap` option allows computing pseudo-BMA+ weights, which account for the
+    uncertainty in information criteria by using a Bayesian bootstrap procedure to
+    compute the distribution of log scores from the approximate leave-one-out
+    predictive densities. The average weight across bootstrap replicates is used for
+    each model. This is the default procedure because it performs better in so-called
+    M-complete and M-open contexts.
+
+    For further information, see Yao et al. (2018):
+    http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
+
     Attributes:
         pointwise_diagnostics: As in the base `BayesBlendModel` class.
         bootstrap: bool indicating whether the Bayesian bootsrap should be
@@ -747,7 +833,7 @@ class PseudoBma(BayesBlendModel):
         pointwise_diagnostics: PointwiseDiagnostics,
         bootstrap: bool = True,
         n_boots: int = 10_000,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         self.bootstrap = bootstrap
         self.n_boots = n_boots
@@ -816,11 +902,11 @@ def _compute_weights(x: np.ndarray, rescaler: float = 1) -> List[float]:
 
 
 def _make_dummy_vars(
-    discrete_covariates: Optional[Dict[str, Sequence]],
-    discrete_covariate_info: Optional[Dict[str, Set[Any]]] = None,
-) -> Optional[Dict[str, Sequence]]:
+    discrete_covariates: Dict[str, Sequence] | None = None,
+    discrete_covariate_info: Dict[str, Set[Any]] | None = None,
+) -> Dict[Hashable, Sequence]:
     if discrete_covariates is None:
-        return None
+        return {}
 
     new_levels_df = pd.DataFrame()
 

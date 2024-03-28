@@ -1,5 +1,6 @@
 import json
 from functools import lru_cache
+from typing import Dict
 
 import numpy as np
 import pytest
@@ -10,11 +11,7 @@ from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, Ps
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
 
-CFG = {
-    "chains": 4,
-    "parallel_chains": 4,
-    "seed": 1234,
-}
+CFG: Dict = {"chains": 4, "parallel_chains": 4, "seed": 1234}
 
 
 def compute_lpd(log_lik: np.ndarray) -> np.ndarray:
@@ -70,7 +67,8 @@ def hierarchical_bayes_stacking_pooling():
     ).fit()
 
 
-def test_model_weights_valid():
+@lru_cache
+def fit_models():
     mle_stacking = MleStacking(pointwise_diagnostics=LPD).fit()
     bayes_stacking = BayesStacking(pointwise_diagnostics=LPD).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
@@ -84,11 +82,42 @@ def test_model_weights_valid():
         seed=1234,
     ).fit()
 
+    return (
+        mle_stacking,
+        bayes_stacking,
+        hier_bayes_stacking,
+        pseudo_bma,
+        pseudo_bma_plus,
+    )
+
+
+def test_model_weights_valid():
+    mle_stacking, bayes_stacking, hier_bayes_stacking, pseudo_bma, pseudo_bma_plus = (
+        fit_models()
+    )
+
     assert sum(mle_stacking.weights.values())
     assert sum(bayes_stacking.weights.values())
     assert all(sum(hier_bayes_stacking.weights.values())[0])
     assert sum(pseudo_bma.weights.values())
     assert sum(pseudo_bma_plus.weights.values())
+
+
+def test_model_blending_valid():
+    draws = {
+        model: {par: fit.stan_variable(par) for par in ["y_rep", "log_lik"]}
+        for model, fit in zip(LPD, [FIT1, FIT2, FIT3])
+    }
+
+    mle_stacking, bayes_stacking, hier_bayes_stacking, pseudo_bma, pseudo_bma_plus = (
+        fit_models()
+    )
+
+    assert mle_stacking.blend(draws)
+    assert bayes_stacking.blend(draws)
+    assert hier_bayes_stacking.blend(draws)
+    assert pseudo_bma.blend(draws)
+    assert pseudo_bma_plus.blend(draws)
 
 
 def test_equal_diagnstics_equal_weights():
