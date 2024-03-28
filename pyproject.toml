@@ -16,10 +16,14 @@ pytest = "^8.1.1"
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.9.0"
 pandas-stubs = "^2.2.1.240316"
+ruff = "^0.3.4"
 
 [[tool.mypy.overrides]]
 module = ["scipy.*"]
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
 
 [build-system]
 requires = ["poetry-core"]
