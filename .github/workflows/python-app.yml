@@ -74,7 +74,7 @@ jobs:
           poetry env use "3.11"
           poetry install 
     - name: Run if any .py files changed
-      if: ${{ needs.meta.outputs.changed-py-files.outputs.any_changed == 'true' }}
+      if: ${{ needs.meta.outputs.changed-py-files.outputs.any-changed == 'true' }}
       run: poetry run mypy ${{ needs.meta.outputs.changed-py-files.outputs.all_changed_files }} --ignore-missing-imports
 
   ruff:
@@ -92,5 +92,5 @@ jobs:
             poetry env use "3.11"
             poetry install 
       - name: Run if any .py files changed
-        if: ${{ needs.meta.outputs.changed-py-files.outputs.any_changed == 'true' }}
+        if: ${{ needs.meta.outputs.changed-py-files.outputs.any-changed == 'true' }}
         run: poetry run ruff check ${{ needs.meta.outputs.changed-py-files.outputs.all_changed_files }}
