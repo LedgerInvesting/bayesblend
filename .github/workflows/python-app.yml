@@ -12,8 +12,8 @@ jobs:
   meta:
     runs-on: ubuntu-latest
     outputs: 
-      any-modified-files: ${{ steps.changed-py-files.outputs.any_changed }}
-      modified-files: ${{ steps.changed-py-files.outputs.all_changed_files }}
+      any-changed: ${{ steps.changed-py-files.outputs.any_changed }}
+      all-changed-files: ${{ steps.changed-py-files.outputs.all_changed_files }}
     steps:
       - uses: actions/checkout@v3
       - name: Get Python changed files
