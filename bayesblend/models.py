@@ -131,17 +131,33 @@ class BayesBlendModel(ABC):
         return self._model_info
 
     def blend(
-        self, predictions: Dict[str, Dict[str, np.ndarray]], seed: int | None = None
+        self,
+        draws: Dict[str, Dict[str, np.ndarray]],
+        seed: int | None = None,
     ):
+        """Blend draws from multiple models given model-based weights.
+
+        Args:
+            draws: Dictionary with model-value pairs, where values are dictionaries of
+                postererior arrays to be blended. For example,
+                {"model1": {"y_pred": np.ndarray, "log_lik": np.ndarray, ...}}. Each
+                underlying array should have the form SxN, where S is the number of
+                MCMC samples and N is the number of datapoints. Array dimensions should
+                match across models and values.
+            seed: Random number seed to blending arrays. Defaults to None.
+
+        Returns:
+            Dictionary of blended draws (across models) for each value.
+        """
         np.random.seed(seed)
 
-        M = len(predictions)
-        S = np.shape(list(list(predictions.values())[0].values())[0])[0]
-        N = np.shape(list(list(predictions.values())[0].values()))[-1]
+        M = len(draws)
+        S = np.shape(list(list(draws.values())[0].values())[0])[0]
+        N = np.shape(list(list(draws.values())[0].values()))[-1]
 
         # ensure same number of posterior samples
-        for k, v in predictions.items():
-            for par, s in v.items():
+        for model, vals in draws.items():
+            for par, s in vals.items():
                 if np.shape(s)[0] != S:
                     raise ValueError(
                         "The number of MCMC samples in `draws` is not consistent"
@@ -165,10 +181,10 @@ class BayesBlendModel(ABC):
             draws_idx_list = draws_idx_list * N
 
         blend: Dict = defaultdict(List[float])
-        blend_idx = {i: j for i, j in zip(predictions.keys(), range(M))}
-        for k, v in predictions.items():
-            blend_id = blend_idx[k]
-            for par, s in v.items():
+        blend_idx = {i: j for i, j in zip(draws.keys(), range(M))}
+        for model, vals in draws.items():
+            blend_id = blend_idx[model]
+            for par, s in vals.items():
                 blended_list = [
                     list(s[draws_idx == blend_id, idx])
                     for idx, draws_idx in enumerate(draws_idx_list)
