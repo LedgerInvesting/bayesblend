@@ -16,6 +16,8 @@ jobs:
       all-changed-files: ${{ steps.changed-py-files.outputs.all_changed_files }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Get Python changed files
         id: changed-py-files
         uses: tj-actions/changed-files@v44
