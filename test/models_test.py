@@ -105,7 +105,7 @@ def test_model_weights_valid():
 
 def test_model_blending_valid():
     draws = {
-        model: {par: fit.stan_variable(par) for par in ["y_rep", "log_lik"]}
+        model: {par: fit.stan_variable(par) for par in ["post_pred", "log_lik"]}
         for model, fit in zip(LPD, [FIT1, FIT2, FIT3])
     }
 
