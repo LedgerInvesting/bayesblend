@@ -202,9 +202,17 @@ class BayesBlendModel(ABC):
         return Draws(**{par: np.asarray(blend[par]).T.reshape(SHAPE) for par in blend})
 
     @classmethod
-    def from_cmdstanpy(cls, model_fits: Dict[str, CmdStanMCMC]) -> BayesBlendModel:
+    def from_cmdstanpy(
+        cls,
+        model_fits: Dict[str, CmdStanMCMC],
+        log_lik_name: str = "log_lik",
+        post_pred_name: str = "post_pred",
+    ) -> BayesBlendModel:
         return cls(
-            {model: Draws.from_cmdstanpy(fit) for model, fit in model_fits.items()}
+            {
+                model: Draws.from_cmdstanpy(fit, log_lik_name, post_pred_name)
+                for model, fit in model_fits.items()
+            }
         )
 
 
