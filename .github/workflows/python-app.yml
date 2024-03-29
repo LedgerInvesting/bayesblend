@@ -23,9 +23,10 @@ jobs:
         uses: tj-actions/changed-files@v44
         with:
           files: |
-            !test/**
             *.py
             **/*.py
+          files_ignore: |
+            test
 
   tests:
     runs-on: ubuntu-latest
