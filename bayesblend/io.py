@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Generator
+from typing import Any, Generator, Tuple
 
 import numpy as np
 from cmdstanpy import CmdStanMCMC
@@ -60,6 +60,14 @@ class Draws:
             return self.post_pred_2d.shape[1]
         else:
             return 0
+
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        return (
+            self.log_lik.shape
+            if self.log_lik is not None
+            else self.post_pred.shape if self.post_pred is not None else ()
+        )
 
     @cached_property
     def log_lik_2d(self) -> np.ndarray[Any, Any] | None:

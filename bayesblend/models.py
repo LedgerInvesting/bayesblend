@@ -136,7 +136,7 @@ class BayesBlendModel(ABC):
         self,
         model_draws: Dict[str, Draws] | None = None,
         seed: int | None = None,
-    ):
+    ) -> Draws:
         """Blend draws from multiple models given model-based weights.
 
         Args:
@@ -145,7 +145,7 @@ class BayesBlendModel(ABC):
             seed: Random number seed to blending arrays. Defaults to None.
 
         Returns:
-            Dictionary of blended draws (across models) for each value.
+            Draws object with blended draws (across models).
         """
         np.random.seed(seed)
 
@@ -154,6 +154,7 @@ class BayesBlendModel(ABC):
         M = len(model_draws)
         S = next(iter(model_draws.values())).n_samples
         N = next(iter(model_draws.values())).n_datapoints
+        SHAPE = next(iter(model_draws.values())).shape
 
         # ensure same number of posterior samples and datapoints
         for model, draws in model_draws.items():
@@ -198,7 +199,13 @@ class BayesBlendModel(ABC):
                 else:
                     blend[par] = blended_list
 
-        return {par: np.asarray(blend[par]).T for par in blend}
+        return Draws(**{par: np.asarray(blend[par]).T.reshape(SHAPE) for par in blend})
+
+    @classmethod
+    def from_cmdstanpy(cls, model_fits: Dict[str, CmdStanMCMC]) -> BayesBlendModel:
+        return cls(
+            {model: Draws.from_cmdstanpy(fit) for model, fit in model_fits.items()}
+        )
 
 
 class MleStacking(BayesBlendModel):

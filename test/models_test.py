@@ -4,27 +4,33 @@ from functools import lru_cache
 
 import numpy as np
 import pytest
+from cmdstanpy import CmdStanModel
 
 from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
 from bayesblend.io import Draws
 
+STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
 
-CFG = {"chains": 4, "parallel_chains": 4, "seed": 1234}
+MODEL = CmdStanModel(stan_file=STAN_FILE)
 
+CFG = {"chains": 4, "parallel_chains": 4, "seed": 1234}
 
 with open(DATA_FILE, "r") as f:
     BERN_DATA = json.load(f)
 
+FIT = MODEL.sample(data=BERN_DATA, **CFG)
 
-def make_draws(mu, p, n_samples=1000, n_datapoints=10):
+
+def make_draws(mu, p, n_samples=1000, n_datapoints=10, shape=None):
+    shape = (n_samples, n_datapoints) if shape is None else shape
     return Draws(
         log_lik=np.array(
             [np.random.normal(mu, 0.1, n_samples) for _ in range(n_datapoints)]
-        ).T,
+        ).T.reshape(shape),
         post_pred=np.array(
             [np.random.choice([0, 1], size=n_samples, p=p) for _ in range(n_datapoints)]
-        ).T,
+        ).T.reshape(shape),
     )
 
 
@@ -109,11 +115,11 @@ def test_model_blending_valid():
         fit_models()
     )
 
-    assert mle_stacking.blend()
-    assert bayes_stacking.blend()
-    assert hier_bayes_stacking.blend()
-    assert pseudo_bma.blend()
-    assert pseudo_bma_plus.blend()
+    assert isinstance(mle_stacking.blend(), Draws)
+    assert isinstance(bayes_stacking.blend(), Draws)
+    assert isinstance(hier_bayes_stacking.blend(), Draws)
+    assert isinstance(pseudo_bma.blend(), Draws)
+    assert isinstance(pseudo_bma_plus.blend(), Draws)
 
 
 def test_equal_diagnstics_equal_weights():
@@ -378,3 +384,20 @@ def test_bayes_stacking_adaptive_prior_structure():
     assert "lambda" in adaptive.model_info.stan_variables().keys()
     assert "lambda" not in base.model_info.stan_variables().keys()
     assert np.isclose(_lambda.mean(), 0.3, rtol=1e-1)
+
+
+def test_blend_3d_variables():
+    model_draws = {
+        "fit1": make_draws(-1, [0.9, 0.1], shape=(100, 10, 10)),
+        "fit2": make_draws(-1.3, [0.8, 0.2], shape=(100, 10, 10)),
+        "fit3": make_draws(-1.7, [0.7, 0.3], shape=(100, 10, 10)),
+    }
+    blend = MleStacking(model_draws).fit().blend()
+
+    assert isinstance(blend, Draws)
+    assert all(blend.shape == draws.shape for draws in model_draws.values())
+
+
+def test_models_from_cmdstanpy():
+    model_fits = dict(fit1=FIT, fit2=FIT)
+    assert MleStacking.from_cmdstanpy(model_fits)
