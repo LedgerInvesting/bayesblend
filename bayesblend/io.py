@@ -10,6 +10,22 @@ from cmdstanpy import CmdStanMCMC
 
 @dataclass
 class Draws:
+    """Dataclass to extract and store posterior draws for use in BayesBlend models.
+
+    The Draws dataclass is the core underlying data representation used by BayesBlend
+    models for both fitting and blending.
+
+    Attributes:
+        log_lik: Array of posterior log likelihood samples for a model. Can be any
+            dimension so long as the first dimenion is the MCMC/posterior sample index.
+        post_pred: Array of posterior predictive samples from a model. Can be any
+            dimension so long as the first dimenion is the MCMC/posterior sample index.
+
+    Yields:
+        Iterating over Draws objects will return {"log_lik": array} and
+            {"post_pred": array} attributes for convenience.
+    """
+
     log_lik: np.ndarray | None = None
     post_pred: np.ndarray | None = None
 
