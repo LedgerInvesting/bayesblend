@@ -13,6 +13,8 @@ from cmdstanpy import CmdStanMCMC, CmdStanModel
 from scipy.optimize import OptimizeResult, minimize
 from scipy.stats import dirichlet
 
+from .io import Draws
+
 STACKING_MODEL = (
     Path(__file__).parent.resolve().joinpath("stan_files").joinpath("stacking.stan")
 )
@@ -66,16 +68,16 @@ class BayesBlendModel(ABC):
     given input covariates.
 
     Attributes:
-        pointwise_diagnostics: Dictionary of pointwise diagnostics for each model to
-            be weighted. The specific diagnostic requires varies across models. For example:
-            `{"model1": [-10, ...], "model2": [...]}`.
+        model_draws: Dictionary of Draws objects, each containing pointwise posteriors
+            for the log likelihood and predictions of a given model. See bayesblend.Draws
+            for details.
     """
 
     def __init__(
         self,
-        pointwise_diagnostics: PointwiseDiagnostics,
+        model_draws: Dict[str, Draws],
     ) -> None:
-        self.pointwise_diagnostics = pointwise_diagnostics
+        self.model_draws = model_draws
         self._coefficients: Dict[str, np.ndarray]
         self._weights: Weights | None = None
         self._model_info: Union[OptimizeResult, CmdStanMCMC] | None = None
@@ -93,7 +95,7 @@ class BayesBlendModel(ABC):
     @property
     def num_models(self) -> int:
         """Return the number of models being compared."""
-        return len(self.pointwise_diagnostics)
+        return len(self.model_draws)
 
     @property
     def model_name(self) -> str:
@@ -132,18 +134,14 @@ class BayesBlendModel(ABC):
 
     def blend(
         self,
-        draws: Dict[str, Dict[str, np.ndarray]],
+        model_draws: Dict[str, Draws] | None = None,
         seed: int | None = None,
     ):
         """Blend draws from multiple models given model-based weights.
 
         Args:
-            draws: Dictionary with model-value pairs, where values are dictionaries of
-                postererior arrays to be blended. For example,
-                {"model1": {"y_pred": np.ndarray, "log_lik": np.ndarray, ...}}. Each
-                underlying array should have the form SxN, where S is the number of
-                MCMC samples and N is the number of datapoints. Array dimensions should
-                match across models and values.
+            model_draws: Dictionary with model-draws pairs, where Draws across models
+                will be blended.
             seed: Random number seed to blending arrays. Defaults to None.
 
         Returns:
@@ -151,17 +149,22 @@ class BayesBlendModel(ABC):
         """
         np.random.seed(seed)
 
-        M = len(draws)
-        S = np.shape(list(list(draws.values())[0].values())[0])[0]
-        N = np.shape(list(list(draws.values())[0].values()))[-1]
+        model_draws = model_draws if model_draws is not None else self.model_draws
 
-        # ensure same number of posterior samples
-        for model, vals in draws.items():
-            for par, s in vals.items():
-                if np.shape(s)[0] != S:
-                    raise ValueError(
-                        "The number of MCMC samples in `draws` is not consistent"
-                    )
+        M = len(model_draws)
+        S = next(iter(model_draws.values())).n_samples
+        N = next(iter(model_draws.values())).n_datapoints
+
+        # ensure same number of posterior samples and datapoints
+        for model, draws in model_draws.items():
+            if draws.n_samples != S:
+                raise ValueError(
+                    f"The number of MCMC samples for {model} is not consistent with other models."
+                )
+            if draws.n_datapoints != N:
+                raise ValueError(
+                    f"The number of datapoints for {model} is not consistent with other models."
+                )
 
         # use array to deal with multiple possible weights across observations
         weight_array = np.concatenate(list(self.weights.values())).T
@@ -171,22 +174,22 @@ class BayesBlendModel(ABC):
 
         if len(draws_idx_list) != 1 and len(draws_idx_list) != N:
             raise ValueError(
-                "Dimensions of `weights` do not match those of `draws`. Either a single "
-                "set of weights should be supplied that will be applied to all observations "
-                "in `draws`, or exactly one set of weights for each observation in `draws` "
-                "should be supplied for pointwise blending."
+                "Dimensions of `weights` do not match those of `model_draws`. Either a "
+                "single set of weights should be supplied that will be applied to all "
+                "observations in `model_draws`, or exactly one set of weights for each "
+                "observation in `model_draws` should be supplied for pointwise blending."
             )
 
         if len(draws_idx_list) == 1:
             draws_idx_list = draws_idx_list * N
 
         blend: Dict = defaultdict(List[float])
-        blend_idx = {i: j for i, j in zip(draws.keys(), range(M))}
-        for model, vals in draws.items():
+        blend_idx = {i: j for i, j in zip(model_draws.keys(), range(M))}
+        for model, draws in model_draws.items():
             blend_id = blend_idx[model]
-            for par, s in vals.items():
+            for par, samples in draws:
                 blended_list = [
-                    list(s[draws_idx == blend_id, idx])
+                    list(samples[draws_idx == blend_id, idx])
                     for idx, draws_idx in enumerate(draws_idx_list)
                 ]
                 if par in blend:
@@ -212,11 +215,11 @@ class MleStacking(BayesBlendModel):
 
     def __init__(
         self,
-        pointwise_diagnostics: PointwiseDiagnostics,
+        model_draws: Dict[str, Draws],
         optimizer_options: Dict[str, Any] | None = None,
     ) -> None:
         self.optimizer_options = optimizer_options
-        super().__init__(pointwise_diagnostics)
+        super().__init__(model_draws)
 
     def _obj_fun(self, w, *args):
         """Negative sum of the weighted log predictive densities"""
@@ -240,7 +243,7 @@ class MleStacking(BayesBlendModel):
     def fit(self) -> MleStacking:
         # get the raw log predictive densities, i.e. p(y_i | y_-i) from the
         # pointwise_diagnostics object
-        lpd_points = np.asarray(list(self.pointwise_diagnostics.values())).T
+        lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
         _, K = lpd_points.shape
 
         res = minimize(
@@ -256,7 +259,7 @@ class MleStacking(BayesBlendModel):
 
         self._weights = {
             model: np.atleast_2d(weight)
-            for model, weight in zip(self.pointwise_diagnostics.keys(), res.x)
+            for model, weight in zip(self.model_draws, res.x)
         }
         self._model_info = res
         return self
@@ -282,12 +285,12 @@ class BayesStacking(BayesBlendModel):
 
     def __init__(
         self,
-        pointwise_diagnostics: PointwiseDiagnostics,
+        model_draws: Dict[str, Draws],
         priors: Priors | None = None,
         cmdstan_control: Dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
-        super().__init__(pointwise_diagnostics)
+        super().__init__(model_draws)
         self.cmdstan_control = (
             CMDSTAN_DEFAULTS
             if cmdstan_control is None
@@ -321,7 +324,7 @@ class BayesStacking(BayesBlendModel):
             stan_file=STACKING_MODEL,
         )
 
-        lpd_points = np.asarray(list(self.pointwise_diagnostics.values())).T
+        lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
         N, M = lpd_points.shape
 
         fit = model.sample(
@@ -336,9 +339,7 @@ class BayesStacking(BayesBlendModel):
 
         self._weights = {
             model: np.atleast_2d(weight).T
-            for model, weight in zip(
-                self.pointwise_diagnostics.keys(), fit.stan_variable("w").T
-            )
+            for model, weight in zip(self.model_draws, fit.stan_variable("w").T)
         }
         self._model_info = fit
         return self
@@ -435,7 +436,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
     def __init__(
         self,
-        pointwise_diagnostics: PointwiseDiagnostics,
+        model_draws: Dict[str, Draws],
         discrete_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates_transform: ContinuousTransforms = "standardize",
@@ -495,7 +496,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
             if unknown_priors:
                 raise ValueError(f"Unrecognized priors {unknown_priors}.")
 
-        super().__init__(pointwise_diagnostics)
+        super().__init__(model_draws)
 
     def _prepare_covariates(
         self,
@@ -645,7 +646,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         discrete, continuous = self._prepare_covariates(
             self.discrete_covariates, self.continuous_covariates
         )
-        lpd_points = np.asarray(list(self.pointwise_diagnostics.values())).T
+        lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
 
         N_data, M = lpd_points.shape
         N_discrete, K = discrete.shape if len(discrete) > 0 else (N_data, 0)
@@ -680,9 +681,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
 
         self._weights = {
             model: weight.T
-            for model, weight in zip(
-                self.pointwise_diagnostics.keys(), fit.stan_variable("w").T
-            )
+            for model, weight in zip(self.model_draws, fit.stan_variable("w").T)
         }
         self._model_info = fit
 
@@ -789,7 +788,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         return {
             model: np.atleast_2d(weight)
             for model, weight in zip(
-                self.pointwise_diagnostics.keys(),
+                self.model_draws,
                 weights,
             )
         }
@@ -831,7 +830,7 @@ class PseudoBma(BayesBlendModel):
 
     def __init__(
         self,
-        pointwise_diagnostics: PointwiseDiagnostics,
+        model_draws: Dict[str, Draws],
         bootstrap: bool = True,
         n_boots: int = 10_000,
         seed: int | None = None,
@@ -839,7 +838,7 @@ class PseudoBma(BayesBlendModel):
         self.bootstrap = bootstrap
         self.n_boots = n_boots
         self.seed = seed
-        super().__init__(pointwise_diagnostics)
+        super().__init__(model_draws)
 
     def _bb_weights(
         self, x: np.ndarray, alpha: Union[float, np.ndarray] = 1.0
@@ -855,12 +854,13 @@ class PseudoBma(BayesBlendModel):
     def fit(self) -> PseudoBma:
         if not self.bootstrap:
             elpds = {
-                model: np.sum(lpd) for model, lpd in self.pointwise_diagnostics.items()
+                model: np.sum(draws.lpd) if draws.lpd is not None else np.nan
+                for model, draws in self.model_draws.items()
             }
             weights = _compute_weights(np.asarray(list(elpds.values())))
 
         else:
-            lpd_points = np.asarray(list(self.pointwise_diagnostics.values())).T
+            lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
             raw_bb_weights = np.asarray(
                 [_compute_weights(bb) for bb in self._bb_weights(lpd_points)]
             )
@@ -868,7 +868,7 @@ class PseudoBma(BayesBlendModel):
 
         self._weights = {
             model: np.atleast_2d(weight)
-            for model, weight in zip(self.pointwise_diagnostics.keys(), weights)
+            for model, weight in zip(self.model_draws, weights)
         }
 
         return self

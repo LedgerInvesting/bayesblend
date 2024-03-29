@@ -1,43 +1,44 @@
+import copy
 import json
 from functools import lru_cache
-from typing import Dict
 
 import numpy as np
 import pytest
-from cmdstanpy import CmdStanModel
 
 from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
+from bayesblend.io import Draws
 
-STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
 
-CFG: Dict = {"chains": 4, "parallel_chains": 4, "seed": 1234}
-
-
-def compute_lpd(log_lik: np.ndarray) -> np.ndarray:
-    max_ll = log_lik.max()
-    return max_ll + np.log(np.mean(np.exp(log_lik - max_ll)))
+CFG = {"chains": 4, "parallel_chains": 4, "seed": 1234}
 
 
 with open(DATA_FILE, "r") as f:
     BERN_DATA = json.load(f)
 
-MODEL = CmdStanModel(stan_file=STAN_FILE)
-FIT1 = MODEL.sample(data=BERN_DATA, **CFG)
-FIT2 = MODEL.sample(data=BERN_DATA | {"beta_alpha": 4, "beta_beta": 4}, **CFG)
-FIT3 = MODEL.sample(data=BERN_DATA | {"beta_alpha": 10, "beta_beta": 2}, **CFG)
 
-LPD = dict(
-    fit1=np.apply_along_axis(compute_lpd, 0, FIT1.stan_variable("log_lik")),
-    fit2=np.apply_along_axis(compute_lpd, 0, FIT2.stan_variable("log_lik")),
-    fit3=np.apply_along_axis(compute_lpd, 0, FIT3.stan_variable("log_lik")),
-)
+def make_draws(mu, p, n_samples=1000, n_datapoints=10):
+    return Draws(
+        log_lik=np.array(
+            [np.random.normal(mu, 0.1, n_samples) for _ in range(n_datapoints)]
+        ).T,
+        post_pred=np.array(
+            [np.random.choice([0, 1], size=n_samples, p=p) for _ in range(n_datapoints)]
+        ).T,
+    )
 
-# extreme LPD points to test that models can handle them
-LPD_EXTREME = {
-    fit: [-21000 if i == 0 else lpd for i, lpd in enumerate(lpd_points)]
-    for fit, lpd_points in LPD.items()
+
+MODEL_DRAWS = {
+    "fit1": make_draws(-1, [0.9, 0.1]),
+    "fit2": make_draws(-1.3, [0.8, 0.2]),
+    "fit3": make_draws(-1.7, [0.7, 0.3]),
 }
+
+# extreme log_lik points to test that models can handle them
+MODEL_DRAWS_EXTREME = copy.copy(MODEL_DRAWS)
+MODEL_DRAWS_EXTREME["fit1"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
+MODEL_DRAWS_EXTREME["fit2"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
+MODEL_DRAWS_EXTREME["fit3"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
 
 DISCRETE_COVARIATES = {
     "dummy": ["group1"] * (BERN_DATA["N"] // 2) + ["group2"] * (BERN_DATA["N"] // 2)
@@ -51,7 +52,7 @@ CONTINUOUS_COVARIATES_ZERO = {"metric_zero": np.zeros(BERN_DATA["N"])}
 @lru_cache
 def hierarchical_bayes_stacking():
     return HierarchicalBayesStacking(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         discrete_covariates=DISCRETE_COVARIATES,
         seed=CFG["seed"],
     ).fit()
@@ -60,7 +61,7 @@ def hierarchical_bayes_stacking():
 @lru_cache
 def hierarchical_bayes_stacking_pooling():
     return HierarchicalBayesStacking(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         discrete_covariates=DISCRETE_COVARIATES,
         partial_pooling=True,
         seed=CFG["seed"],
@@ -69,15 +70,15 @@ def hierarchical_bayes_stacking_pooling():
 
 @lru_cache
 def fit_models():
-    mle_stacking = MleStacking(pointwise_diagnostics=LPD).fit()
-    bayes_stacking = BayesStacking(pointwise_diagnostics=LPD).fit()
+    mle_stacking = MleStacking(model_draws=MODEL_DRAWS).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
     pseudo_bma = PseudoBma(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         bootstrap=False,
     ).fit()
     pseudo_bma_plus = PseudoBma(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         n_boots=1000,
         seed=1234,
     ).fit()
@@ -104,38 +105,33 @@ def test_model_weights_valid():
 
 
 def test_model_blending_valid():
-    draws = {
-        model: {par: fit.stan_variable(par) for par in ["post_pred", "log_lik"]}
-        for model, fit in zip(LPD, [FIT1, FIT2, FIT3])
-    }
-
     mle_stacking, bayes_stacking, hier_bayes_stacking, pseudo_bma, pseudo_bma_plus = (
         fit_models()
     )
 
-    assert mle_stacking.blend(draws)
-    assert bayes_stacking.blend(draws)
-    assert hier_bayes_stacking.blend(draws)
-    assert pseudo_bma.blend(draws)
-    assert pseudo_bma_plus.blend(draws)
+    assert mle_stacking.blend()
+    assert bayes_stacking.blend()
+    assert hier_bayes_stacking.blend()
+    assert pseudo_bma.blend()
+    assert pseudo_bma_plus.blend()
 
 
 def test_equal_diagnstics_equal_weights():
-    lpd_dict = dict(model1=LPD["fit1"], model2=LPD["fit1"])
-    stacking = MleStacking(pointwise_diagnostics=lpd_dict).fit()
+    model_draws = dict(model1=MODEL_DRAWS["fit1"], model2=MODEL_DRAWS["fit1"])
+    stacking = MleStacking(model_draws=model_draws).fit()
     assert all([w == 0.5 for w in stacking.weights.values()])
 
 
 def test_bayes_stacking_weight_extreme_elpd():
-    mle_stacking = MleStacking(pointwise_diagnostics=LPD_EXTREME).fit()
-    bayes_stacking = BayesStacking(pointwise_diagnostics=LPD_EXTREME).fit()
+    mle_stacking = MleStacking(model_draws=MODEL_DRAWS_EXTREME).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS_EXTREME).fit()
     # MLE optimization will fail to converge, Bayes will succeed
     assert not mle_stacking.model_info.success
     assert bayes_stacking.model_info.summary()["R_hat"].max() < 1.01
 
 
 def test_bayes_stacking_weight_arrays():
-    bayes_stacking = BayesStacking(pointwise_diagnostics=LPD).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
     # internal weights are full posteriors, and should always have shape[0]>1
     # hierarchical stacking should also have weights for each datapoint, or shape[1]==N
@@ -159,13 +155,13 @@ def test_bayes_stacking_weight_arrays():
 def test_hier_bayes_stacking_no_covariates_fails():
     with pytest.raises(ValueError):
         HierarchicalBayesStacking(
-            pointwise_diagnostics=LPD,
+            model_draws=MODEL_DRAWS,
         )
 
 
 def test_hier_bayes_stacking_only_continuous_covariates():
     hier_bayes_stacking = HierarchicalBayesStacking(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         continuous_covariates=CONTINUOUS_COVARIATES,
         cmdstan_control=CFG,
     ).fit()
@@ -199,7 +195,7 @@ def test_hier_bayes_stacking_pooling():
     hyperprior_pars = ["mu_global"]
     prior_pars = ["mu_disc", "sigma_disc"]
 
-    n_models = len(LPD)
+    n_models = len(MODEL_DRAWS)
     model_coefs = hier_bayes_stacking_pooled.coefficients
 
     assert all(
@@ -235,7 +231,7 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
     stacks = {}
     for transform in transforms:
         stacks[transform] = HierarchicalBayesStacking(
-            pointwise_diagnostics=LPD,
+            model_draws=MODEL_DRAWS,
             continuous_covariates=CONTINUOUS_COVARIATES,
             continuous_covariates_transform=transform,
             cmdstan_control=CFG,
@@ -246,7 +242,7 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
 
     with pytest.raises(ValueError, match="logit not found"):
         HierarchicalBayesStacking(
-            pointwise_diagnostics=LPD,
+            model_draws=MODEL_DRAWS,
             continuous_covariates=CONTINUOUS_COVARIATES,
             continuous_covariates_transform="logit",
             cmdstan_control=CFG,
@@ -255,7 +251,7 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
     # error if trying to standardize variable with 0 SD/variance
     with pytest.raises(ValueError, match="cannot be standardized"):
         HierarchicalBayesStacking(
-            pointwise_diagnostics=LPD,
+            model_draws=MODEL_DRAWS,
             continuous_covariates=CONTINUOUS_COVARIATES_ZERO,
             continuous_covariates_transform="standardize",
             cmdstan_control=CFG,
@@ -335,15 +331,17 @@ def test_bayes_stacking_generation_with_priors():
         "lambda_loc": 0.5,
     }
 
-    bayes_stacking = BayesStacking(LPD, cmdstan_control=CFG).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS, cmdstan_control=CFG).fit()
     bayes_stacking_priors = BayesStacking(
-        LPD, cmdstan_control=CFG, priors={"w_prior": [2, 2, 2]}
+        model_draws=MODEL_DRAWS, cmdstan_control=CFG, priors={"w_prior": [2, 2, 2]}
     ).fit()
     hier_bayes_stacking = HierarchicalBayesStacking(
-        LPD, cmdstan_control=CFG, discrete_covariates=DISCRETE_COVARIATES
+        model_draws=MODEL_DRAWS,
+        cmdstan_control=CFG,
+        discrete_covariates=DISCRETE_COVARIATES,
     ).fit()
     hier_bayes_stacking_priors = HierarchicalBayesStacking(
-        LPD,
+        model_draws=MODEL_DRAWS,
         cmdstan_control=CFG,
         discrete_covariates=DISCRETE_COVARIATES,
         priors=hier_priors,
@@ -355,11 +353,11 @@ def test_bayes_stacking_generation_with_priors():
     assert hier_bayes_stacking_priors.priors == hier_priors
 
     with pytest.raises(ValueError):
-        BayesStacking(LPD, priors={"w_prior": [1]})
+        BayesStacking(model_draws=MODEL_DRAWS, priors={"w_prior": [1]})
 
     with pytest.raises(ValueError):
         HierarchicalBayesStacking(
-            LPD,
+            model_draws=MODEL_DRAWS,
             discrete_covariates=DISCRETE_COVARIATES,
             priors=hier_priors | {"x": 1},
         )
@@ -368,7 +366,7 @@ def test_bayes_stacking_generation_with_priors():
 def test_bayes_stacking_adaptive_prior_structure():
     base = hierarchical_bayes_stacking()
     adaptive = HierarchicalBayesStacking(
-        pointwise_diagnostics=LPD,
+        model_draws=MODEL_DRAWS,
         discrete_covariates=DISCRETE_COVARIATES,
         adaptive=True,
         cmdstan_control=CFG,
@@ -379,4 +377,4 @@ def test_bayes_stacking_adaptive_prior_structure():
     assert not base.adaptive
     assert "lambda" in adaptive.model_info.stan_variables().keys()
     assert "lambda" not in base.model_info.stan_variables().keys()
-    assert np.isclose(_lambda.mean(), 0.25, rtol=1e-1)
+    assert np.isclose(_lambda.mean(), 0.3, rtol=1e-1)

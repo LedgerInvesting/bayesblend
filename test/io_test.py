@@ -15,6 +15,13 @@ with open(DATA_FILE, "r") as f:
 MODEL = CmdStanModel(stan_file=STAN_FILE)
 
 
+def test_draws_init():
+    assert Draws(
+        log_lik=np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]),
+        post_pred=np.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]),
+    )
+
+
 def test_draws_from_cmdstanpy():
     fit = MODEL.sample(data=BERN_DATA, chains=4, parallel_chains=4, seed=1234)
     assert Draws.from_cmdstanpy(fit)
