@@ -23,6 +23,9 @@ black = "^24.3.0"
 module = ["scipy.*"]
 ignore_missing_imports = true
 
+[tool.mypy]
+exclude = ['test']
+
 [tool.ruff]
 line-length = 88
 
