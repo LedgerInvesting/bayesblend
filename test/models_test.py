@@ -115,11 +115,23 @@ def test_model_blending_valid():
         fit_models()
     )
 
-    assert isinstance(mle_stacking.blend(), Draws)
-    assert isinstance(bayes_stacking.blend(), Draws)
-    assert isinstance(hier_bayes_stacking.blend(), Draws)
-    assert isinstance(pseudo_bma.blend(), Draws)
-    assert isinstance(pseudo_bma_plus.blend(), Draws)
+    assert isinstance(mle_stacking._blend(), Draws)
+    assert isinstance(bayes_stacking._blend(), Draws)
+    assert isinstance(hier_bayes_stacking._blend(), Draws)
+    assert isinstance(pseudo_bma._blend(), Draws)
+    assert isinstance(pseudo_bma_plus._blend(), Draws)
+
+
+def test_model_predictions_valid():
+    mle_stacking, bayes_stacking, hier_bayes_stacking, pseudo_bma, pseudo_bma_plus = (
+        fit_models()
+    )
+
+    assert isinstance(mle_stacking.predict(return_weights=True), tuple)
+    assert isinstance(bayes_stacking.predict(return_weights=True), tuple)
+    assert isinstance(hier_bayes_stacking.predict(return_weights=True), tuple)
+    assert isinstance(pseudo_bma.predict(return_weights=True), tuple)
+    assert isinstance(pseudo_bma_plus.predict(return_weights=True), tuple)
 
 
 def test_equal_diagnstics_equal_weights():
@@ -165,6 +177,25 @@ def test_hier_bayes_stacking_no_covariates_fails():
         )
 
 
+def test_hier_bayes_stacking_predict_with_new():
+    hier_bayes_stacking = hierarchical_bayes_stacking()
+
+    # predicting with new data will fail if new covariates given without
+    # new draws, and vice-versa. This is to catch issues where someone
+    # tries to predict by, e.g., only passing new covariates, where the
+    # model would then try to use those covariates to blend draws used
+    # to fit the averaging/stacking model.
+    with pytest.raises(ValueError, match="Either `model_draws`"):
+        hier_bayes_stacking.predict(discrete_covariates=DISCRETE_COVARIATES)
+
+    with pytest.raises(ValueError, match="Either `model_draws`"):
+        hier_bayes_stacking.predict(model_draws=MODEL_DRAWS)
+
+    assert hier_bayes_stacking.predict(
+        model_draws=MODEL_DRAWS, discrete_covariates=DISCRETE_COVARIATES
+    )
+
+
 def test_hier_bayes_stacking_only_continuous_covariates():
     hier_bayes_stacking = HierarchicalBayesStacking(
         model_draws=MODEL_DRAWS,
@@ -172,7 +203,7 @@ def test_hier_bayes_stacking_only_continuous_covariates():
         cmdstan_control=CFG,
     ).fit()
 
-    assert hier_bayes_stacking.predict(continuous_covariates=CONTINUOUS_COVARIATES)
+    assert hier_bayes_stacking.predict()
 
 
 def test_hier_bayes_stacking_predict_different_covariates_fails():
@@ -266,12 +297,12 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
 
 def test_hier_bayes_stacking_weight_predictions():
     hier_bayes_stacking = hierarchical_bayes_stacking()
-    weight_predictions_old_data = hier_bayes_stacking.predict(
-        discrete_covariates=DISCRETE_COVARIATES
-    )
-    new_covariates = {"dummy": ["group1"] * 2 + ["group2"] * 2}
-    weight_predictions_new_data = hier_bayes_stacking.predict(
-        discrete_covariates=new_covariates
+    _, weight_predictions_old_data = hier_bayes_stacking.predict(return_weights=True)
+    new_covariates = {"dummy": ["group1"] * 5 + ["group2"] * 5}
+    _, weight_predictions_new_data = hier_bayes_stacking.predict(
+        model_draws=MODEL_DRAWS,
+        discrete_covariates=DISCRETE_COVARIATES,
+        return_weights=True,
     )
 
     # predictions from passing in same data should be approx equal to estimated weights
@@ -296,6 +327,7 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
     hier_bayes_stacking = hierarchical_bayes_stacking_pooling()
     # covariate name is the same, but there are new levels
     new_levels = {"dummy": ["group2"] * 5 + ["group10"] * 5}
+    new_draws = MODEL_DRAWS
 
     # set the group-level covariate coefficent to all 0s to force
     # new level coefficent to be exactly 0. The estimated weights
@@ -307,7 +339,9 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
     hier_bayes_stacking._coefficients["sigma_disc"] = np.zeros_like(
         hier_bayes_stacking._coefficients["sigma_disc"]
     )
-    predicted_weights = hier_bayes_stacking.predict(discrete_covariates=new_levels)
+    blended_draws, predicted_weights = hier_bayes_stacking.predict(
+        model_draws=new_draws, discrete_covariates=new_levels, return_weights=True
+    )
 
     # predicitons where dummy=group10 should be the same as when dummy=group1,
     # and predictions for dummy=group2 should remain the same as before. Because
@@ -319,6 +353,7 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
             hier_bayes_stacking.weights.values(), predicted_weights.values()
         )
     )
+    assert isinstance(blended_draws, Draws)
 
 
 def test_bayes_stacking_generation_with_priors():
@@ -392,7 +427,7 @@ def test_blend_3d_variables():
         "fit2": make_draws(-1.3, [0.8, 0.2], shape=(100, 10, 10)),
         "fit3": make_draws(-1.7, [0.7, 0.3], shape=(100, 10, 10)),
     }
-    blend = MleStacking(model_draws).fit().blend()
+    blend = MleStacking(model_draws=model_draws).fit().predict()
 
     assert isinstance(blend, Draws)
     assert all(blend.shape == draws.shape for draws in model_draws.values())

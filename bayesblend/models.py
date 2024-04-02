@@ -4,6 +4,7 @@ import typing
 import warnings
 from abc import ABC, abstractmethod
 from collections import defaultdict
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
 
@@ -79,7 +80,7 @@ class BayesBlendModel(ABC):
     ) -> None:
         self.model_draws = model_draws
         self._coefficients: Dict[str, np.ndarray]
-        self._weights: Weights | None = None
+        self._weights: Weights
         self._model_info: Union[OptimizeResult, CmdStanMCMC] | None = None
 
     @abstractmethod
@@ -88,7 +89,12 @@ class BayesBlendModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self) -> Weights:
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
         """Predict from the blending model."""
         pass
 
@@ -102,21 +108,19 @@ class BayesBlendModel(ABC):
         """The model name."""
         return self.__class__.__name__
 
-    @property
+    @cached_property
     def weights(self) -> Weights:
         """Return a dictionary of weights.
 
         For Bayesian models, this property returns the
         mean posterior weights for simplicty.
         """
-        if self._weights is None:
-            return {}
         return {
             model: np.mean(weight, axis=0, keepdims=True)
             for model, weight in self._weights.items()
         }
 
-    @property
+    @cached_property
     def coefficients(self) -> Dict[str, np.ndarray]:
         """Return the model coefficients, if any."""
         if not self._coefficients:
@@ -132,16 +136,21 @@ class BayesBlendModel(ABC):
         """Return the fitted model information."""
         return self._model_info
 
-    def blend(
+    def _blend(
         self,
         model_draws: Dict[str, Draws] | None = None,
+        weights: Weights | None = None,
         seed: int | None = None,
     ) -> Draws:
         """Blend draws from multiple models given model-based weights.
 
         Args:
             model_draws: Dictionary with model-draws pairs, where Draws across models
-                will be blended.
+                will be blended. If left unspecified, blending will be done on
+                `self.model_draws`.
+            weights: Dictionary of model-weight pairs to use for blending
+                `model_draws`. If left unspecified, blending will be done with
+                `self.weights`.
             seed: Random number seed to blending arrays. Defaults to None.
 
         Returns:
@@ -150,6 +159,7 @@ class BayesBlendModel(ABC):
         np.random.seed(seed)
 
         model_draws = model_draws if model_draws is not None else self.model_draws
+        weights = weights if weights is not None else self.weights
 
         M = len(model_draws)
         S = next(iter(model_draws.values())).n_samples
@@ -168,9 +178,9 @@ class BayesBlendModel(ABC):
                 )
 
         # use array to deal with multiple possible weights across observations
-        weight_array = np.concatenate(list(self.weights.values())).T
+        weight_array = np.concatenate(list(weights.values())).T
         draws_idx_list = [
-            np.random.choice(list(range(M)), S, p=weights) for weights in weight_array
+            np.random.choice(list(range(M)), S, p=w) for w in weight_array
         ]
 
         if len(draws_idx_list) != 1 and len(draws_idx_list) != N:
@@ -225,7 +235,7 @@ class MleStacking(BayesBlendModel):
     can be obtained via PSIS-LOO or PSIS-LFO.
 
     Attributes:
-        pointwise_diagnostics: As in the base `BayesBlendModel` class.
+        model_draws: As in the base `BayesBlendModel` class.
     """
 
     def __init__(
@@ -279,8 +289,14 @@ class MleStacking(BayesBlendModel):
         self._model_info = res
         return self
 
-    def predict(self) -> Weights:
-        return self.weights
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        blend = self._blend(model_draws=model_draws, **kwargs)
+        return blend if not return_weights else (blend, self.weights)
 
 
 class BayesStacking(BayesBlendModel):
@@ -291,7 +307,7 @@ class BayesStacking(BayesBlendModel):
     across log predictive densities.
 
     Attributes:
-        pointwise_diagnostics: As in the base `BayesBlendModel` class.
+        model_draws: As in the base `BayesBlendModel` class.
         priors: Dictionary of (prior, values) to be passed to Stan.
         cmdstan_control: Dictionary of keyword arguments to send to cmdstan model
             sampling routine.
@@ -304,6 +320,7 @@ class BayesStacking(BayesBlendModel):
         priors: Priors | None = None,
         cmdstan_control: Dict[str, Any] | None = None,
         seed: int | None = None,
+        **kwargs,
     ) -> None:
         super().__init__(model_draws)
         self.cmdstan_control = (
@@ -359,8 +376,14 @@ class BayesStacking(BayesBlendModel):
         self._model_info = fit
         return self
 
-    def predict(self) -> Weights:
-        return self.weights
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        blend = self._blend(model_draws=model_draws, **kwargs)
+        return blend if not return_weights else (blend, self.weights)
 
     @property
     def priors(self) -> Priors:
@@ -376,7 +399,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
     are a function of input covariates.
 
     Attributes:
-        pointwise_diagnostics: As in the base `BayesBlendModel` class.
+        model_draws: As in the base `BayesBlendModel` class.
         discrete_covariates: Dictionary of covariate name and value pairs,
             where the value is a sequence with an element for each of the
             cells/points contained in each model in `pointwise_diagnostics`. Dummy
@@ -730,11 +753,11 @@ class HierarchicalBayesStacking(BayesBlendModel):
             )
         ).T
 
-    def predict(
+    def _predict_weights(
         self,
         discrete_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates: Dict[str, Sequence] | None = None,
-    ) -> Dict[str, np.ndarray]:
+    ) -> Weights:
         self._validate_prediction_covariates(discrete_covariates, continuous_covariates)
 
         discrete, continuous = self._prepare_covariates(
@@ -808,6 +831,45 @@ class HierarchicalBayesStacking(BayesBlendModel):
             )
         }
 
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        discrete_covariates: Dict[str, Sequence] | None = None,
+        continuous_covariates: Dict[str, Sequence] | None = None,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        predicted_weights = (
+            self._predict_weights(discrete_covariates, continuous_covariates)
+            if discrete_covariates or continuous_covariates
+            else None
+        )
+
+        if bool(predicted_weights) ^ bool(model_draws):
+            raise ValueError(
+                "Either `model_draws` and covariates should be left `None` "
+                "to blend in-sample pedictions from models used to train the "
+                "`HierarchicalBayesStacking` model, or both `model_draws` and "
+                "covariates associated with new model predictions should be supplied "
+                "to blend out-of-sample draws."
+            )
+
+        blend = self._blend(
+            model_draws=model_draws,
+            weights=predicted_weights,
+            **kwargs,
+        )
+        weights = {
+            model: np.atleast_2d(weight)
+            for model, weight in (
+                self._weights.items()
+                if predicted_weights is None
+                else predicted_weights.items()
+            )
+        }
+
+        return blend if not return_weights else (blend, weights)
+
     @property
     def priors(self) -> Priors:
         return self._priors
@@ -835,7 +897,7 @@ class PseudoBma(BayesBlendModel):
     http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
 
     Attributes:
-        pointwise_diagnostics: As in the base `BayesBlendModel` class.
+        model_draws: As in the base `BayesBlendModel` class.
         bootstrap: bool indicating whether the Bayesian bootsrap should be
             used to obtain regularized weight estimates (pseudo-BMA+). Defaults to `True`.
         n_boots: Number of bootstrap samples for the Bayesian bootstrap procedure.
@@ -888,8 +950,14 @@ class PseudoBma(BayesBlendModel):
 
         return self
 
-    def predict(self) -> Weights:
-        return self.weights
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        blend = self._blend(model_draws=model_draws, **kwargs)
+        return blend if not return_weights else (blend, self.weights)
 
 
 def _compute_weights(x: np.ndarray, rescaler: float = 1) -> List[float]:
