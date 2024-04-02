@@ -218,12 +218,12 @@ def test_hier_bayes_stacking_predict_different_covariate_levels():
     # covariate name is the same, but there is a new level
     new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     with pytest.raises(ValueError):
-        hier_bayes_stacking.predict(discrete_covariates=new_level)
+        hier_bayes_stacking._predict_weights(discrete_covariates=new_level)
 
     # covariate name is the same, but there is a missing level
     # should generate predictions as normal without failing
     missing_level = {"dummy": ["group1"] * 4}
-    hier_bayes_stacking.predict(discrete_covariates=missing_level)
+    hier_bayes_stacking._predict_weights(discrete_covariates=missing_level)
 
 
 def test_hier_bayes_stacking_pooling():
@@ -250,17 +250,17 @@ def test_hier_bayes_stacking_predict_different_covariate_levels_pooling():
     # covariate name is the same, but there is a new level
     one_new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=one_new_level)
+        hier_bayes_stacking._predict_weights(discrete_covariates=one_new_level)
 
     two_new_levels = {"dummy": ["group1"] * 2 + ["group99"] * 2 + ["group98"] * 2}
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=two_new_levels)
+        hier_bayes_stacking._predict_weights(discrete_covariates=two_new_levels)
 
     three_new_levels = {
         "dummy": ["group1"] * 2 + ["group99"] * 2 + ["group98"] * 2 + ["group97"] * 2
     }
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=three_new_levels)
+        hier_bayes_stacking._predict_weights(discrete_covariates=three_new_levels)
 
 
 def test_hier_bayes_stacking_continuous_covariates_transform():
@@ -297,12 +297,12 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
 
 def test_hier_bayes_stacking_weight_predictions():
     hier_bayes_stacking = hierarchical_bayes_stacking()
-    _, weight_predictions_old_data = hier_bayes_stacking.predict(return_weights=True)
-    new_covariates = {"dummy": ["group1"] * 5 + ["group2"] * 5}
-    _, weight_predictions_new_data = hier_bayes_stacking.predict(
-        model_draws=MODEL_DRAWS,
-        discrete_covariates=DISCRETE_COVARIATES,
-        return_weights=True,
+    weight_predictions_old_data = hier_bayes_stacking._predict_weights(
+        discrete_covariates=DISCRETE_COVARIATES
+    )
+    new_covariates = {"dummy": ["group1"] * 2 + ["group2"] * 2}
+    weight_predictions_new_data = hier_bayes_stacking._predict_weights(
+        discrete_covariates=new_covariates,
     )
 
     # predictions from passing in same data should be approx equal to estimated weights

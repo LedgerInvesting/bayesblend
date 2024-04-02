@@ -862,7 +862,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         weights = {
             model: np.atleast_2d(weight)
             for model, weight in (
-                self._weights.items()
+                self.weights.items()
                 if predicted_weights is None
                 else predicted_weights.items()
             )
