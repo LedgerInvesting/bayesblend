@@ -1,6 +1,6 @@
-# bayesblend
+# BayesBlend
 
-`bayesblend` provides an easy to use interface for Bayesian Model Averaging and Bayesian Stacking. The core functionality is devided into two classes: 
+BayesBlend provides an easy-to-use interface for Bayesian model averaging and Bayesian stacking. The core functionality is divided into two classes: 
 
 - `Draws`
 - `BayesBlendModel`
@@ -11,7 +11,7 @@ The `Draws` class is used to store and manipulate MCMC draws from the posterior 
 
 ## `BayesBlendModel`
 
-The `BayesBlendModel` is an abstract base class that is subclassed into the following various Bayesian Model Averaging and Bayesian Stacking models: 
+The `BayesBlendModel` is an abstract base class that is subclassed into the following various Bayesian model averaging and Bayesian stacking models: 
 
 - `MleStacking`
 - `BayesStacking`
@@ -24,7 +24,7 @@ Each of these models takes a dictionary of `Draws` objects as input (one for eac
 
 The below example expands on the `cmdstanpy` example [here](https://github.com/stan-dev/cmdstanpy?tab=readme-ov-file#example), fitting a bernoulli model twice and then blending the results together.
 
-```
+```python
 # simple bernoulli model
 stan_string = """
     data {
