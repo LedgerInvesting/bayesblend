@@ -53,4 +53,4 @@ Note that both Ruff and MyPy are required CI/CD checks that will block merging a
 
 ## Versioning
 
-TODO
+This project uses semantic versioning.
