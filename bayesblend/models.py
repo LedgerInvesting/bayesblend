@@ -156,7 +156,7 @@ class BayesBlendModel(ABC):
         Returns:
             Draws object with blended draws (across models).
         """
-        np.random.seed(seed)
+        rng = np.random.RandomState(seed)
 
         model_draws = model_draws if model_draws is not None else self.model_draws
         weights = weights if weights is not None else self.weights
@@ -179,8 +179,10 @@ class BayesBlendModel(ABC):
 
         # use array to deal with multiple possible weights across observations
         weight_array = np.concatenate(list(weights.values())).T
+        # weight normalization below accounts for rounding error, will fail loudly
+        # if sum(w) is not already very close to 1
         draws_idx_list = [
-            np.random.choice(list(range(M)), S, p=w) for w in weight_array
+            rng.choice(list(range(M)), S, p=_normalize_weights(w)) for w in weight_array
         ]
 
         if len(draws_idx_list) != 1 and len(draws_idx_list) != N:
@@ -1063,3 +1065,10 @@ def _running_weight_mean(
     prior_weights: np.ndarray, new_weights: np.ndarray, idx: int
 ) -> np.ndarray:
     return prior_weights * (1 - (1 / idx)) + new_weights * (1 / idx)
+
+
+def _normalize_weights(weights: np.ndarray):
+    """Normalize weights due to rounding error, witch strict value check"""
+    if not np.isclose(sum(weights), 1, atol=1e-7):
+        raise ValueError(f"Weights do not sum to 1: {weights}.")
+    return weights / sum(weights)
