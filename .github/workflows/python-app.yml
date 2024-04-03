@@ -29,8 +29,8 @@ jobs:
             test/**
   mypy:
     needs: meta
-    if: ${{ needs.meta.outputs.any-changed == 'true' }}
     runs-on: ubuntu-latest
+    if: ${{ needs.meta.outputs.any-changed == 'true' }}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
@@ -47,8 +47,8 @@ jobs:
           
   ruff:
     needs: meta
-    if: ${{ needs.meta.outputs.any-changed == 'true' }}
     runs-on: ubuntu-latest
+    if: ${{ needs.meta.outputs.any-changed == 'true' }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
