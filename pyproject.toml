@@ -39,6 +39,26 @@ upload_to_pypi = false
 upload_to_release = true
 build_command = "pipx install poetry && poetry build"
 
+[tool.semantic_release.commit_parser_options]
+allowed_types = [
+    "build",
+    "chore",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "style",
+    "refactor",
+    "test",
+    "major",
+    "minor",
+    "patch",
+]
+major_types = ["major"]
+minor_types = ["feat", "minor"]
+patch_types = ["fix", "perf", "patch"]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
