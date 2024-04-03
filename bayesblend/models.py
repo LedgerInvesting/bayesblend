@@ -64,9 +64,7 @@ class BayesBlendModel(ABC):
 
     This ABC provides a template for all specific weighting models/methods,
     which all inherit the base class. Each subclass should have a defined
-    `fit` method, and an optional `coefficients` property and `predict` method
-    if the model has relevant coefficients that can be used to predict new weights
-    given input covariates.
+    `fit` method, `predict` method.
 
     Attributes:
         model_draws: Dictionary of Draws objects, each containing pointwise posteriors
@@ -95,7 +93,23 @@ class BayesBlendModel(ABC):
         return_weights: bool = False,
         **kwargs,
     ) -> Draws | Tuple[Draws, Weights]:
-        """Predict from the blending model."""
+        """Predict from the blending model.
+
+        Args:
+            model_draws: Dictionary of Draws objects containing the posterior samples
+                to be blended together given the trained blending model weights.
+                Defaults to None, which returns a blend of the draws used to train
+                the blending model.
+            return_weights: Bool specifying whether the blending model weights should
+                be returned alongside the blended Draws. Defaults to False.
+
+        Returns:
+            A single Draws object that is a blend of all models from `model_draws`.
+            If `return_weights = True`, then a tuple of the blended Draws object and
+            the weights used for blending is returned. This is useful to inspect the
+            weights, particularly in cases where weights are conditional on covariates
+            (as is the case for hierarchical stacking).
+        """
         pass
 
     @property
