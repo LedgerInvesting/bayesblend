@@ -29,6 +29,16 @@ exclude = ['test']
 [tool.ruff]
 line-length = 88
 
+[tool.semantic_release]
+version_variable = [
+    "bayesblend/__init__.py:__version__",
+    "pyproject.toml:version",
+]
+branch = "main"
+upload_to_pypi = false
+upload_to_release = true
+build_command = "pipx install poetry && poetry build"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
