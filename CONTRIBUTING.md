@@ -1,6 +1,6 @@
 # Contribute to BayesBlend
 
-## Dependency management
+## Dependency Management
 
 BayesBlend recommends using Python `3.11` for local development and contributing.
 
@@ -25,7 +25,7 @@ poetry install
 
 NOTE: Throughout this doc, you will see many commands of the form `poetry ...`. The `poetry` command is just ensuring that `Python` uses the `Poetry`-configured project when runnings commands. Alternatively, you can enter the `Poetry` virtual environment per `poetry shell` and interact with `Python` as per usual without pre-fixing with `poetry` each time. For example, in the `Poetry` shell, `poetry run python ...` simply becomes `python ...`. 
 
-## Run tests
+## Run Tests
 
 To ensure that the project is installed and functioning properly, run the tests and check that they pass:
 
@@ -33,7 +33,7 @@ To ensure that the project is installed and functioning properly, run the tests 
 poetry run pytest
 ```
 
-## Code style and linting
+## Code Style and Linting
 
 This project uses [Ruff](https://github.com/astral-sh/ruff) as a linter and formatter and [MyPy](https://mypy-lang.org/) for static type checking. Both are listed in the `dev` group of dependencies that should get installed per `poetry install` (refer to the `pyproject.toml` to see versions). 
 
