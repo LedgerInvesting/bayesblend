@@ -2,15 +2,19 @@
 
 ## Dependency Management
 
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies. Poetry needs to be installed first:
+BayesBlend recommends Python `3.11` for local development and contributing.
+
+This project uses [Poetry](https://python-poetry.org/) to manage dependencies. Poetry needs to be installed first, which requires `pipx`. 
+To ensure the same Python versions are used to install `pipx` and Poetry, we recommend installing Poetry using:
 
 ```
-pipx install poetry
+python3.11 -m pip install pipx
+python3.11 -m pipx install poetry
 ```
 
-Note that `Poetry` should be installed in a dedicated virtual environment separate from the development environment used for this project. Refer to the [Poetry installation docs](https://python-poetry.org/docs/#installing-with-pipx) for further information. 
+Note that Poetry is installed in a dedicated virtual environment by `pipx` separate from the development environment used for this project. Refer to the [Poetry installation docs](https://python-poetry.org/docs/#installing-with-pipx) for further information. 
 
-After installation, use `Poetry` to install the project and dependencies: 
+After installation, use Poetry to install the project and dependencies: 
 
 ```
 poetry install
@@ -30,19 +34,19 @@ poetry run pytest
 
 This project uses [Ruff](https://github.com/astral-sh/ruff) as a linter and formatter and [MyPy](https://mypy-lang.org/) for static type checking. Both are listed in the `dev` group of dependencies that should get installed per `poetry install` (refer to the `pyproject.toml` to see versions). 
 
-To run `Ruff` checks: 
+To run Ruff checks: 
 
 ```
 poetry run ruff check
 ```
 
-And run `MyPy` checks: 
+And run MyPy checks: 
 
 ```
-poetry run mypy
+poetry run mypy .
 ```
 
-Note that both `Ruff` and `MyPy` are required CI/CD checks that will block merging a pull request into main, so it is important to check that they both pass locally before submitting a pull request. 
+Note that both Ruff and MyPy are required CI/CD checks that will block merging a pull request into main, so it is important to check that they both pass locally before submitting a pull request. 
 
 ## Versioning
 
