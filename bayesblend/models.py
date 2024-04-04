@@ -250,6 +250,10 @@ class MleStacking(BayesBlendModel):
     across log predictive densities. Approximate log predictive densities
     can be obtained via PSIS-LOO or PSIS-LFO.
 
+    The fitting routine largely follows the implementation in Arviz. 
+    See:
+    * https://github.com/arviz-devs/arviz/blob/main/arviz/stats/stats.py#L223-L250
+
     Attributes:
         model_draws: As in the base `BayesBlendModel` class.
     """
@@ -265,42 +269,48 @@ class MleStacking(BayesBlendModel):
     def _obj_fun(self, w, *args):
         """Negative sum of the weighted log predictive densities"""
         Y = args[0]
+        w = np.concatenate([w, [1 - sum(w)]])
         log_scores = np.log(Y @ w)
         return -sum(log_scores)
 
     def _grad(self, w, *args):
-        """Gradient/jacobian of the objective function"""
+        """Jacobian of the objective function.
+
+        The gradient of log(Y @ w) wrt w is 1/(Y @ w) Y, using
+        the chain rule. Since we are only estimating K - 1
+        weights, we can correct the gradient by multiplying
+        by Y[:,:K - 1] - Y[:,-1].
+        """
         Y = args[0]
+        w = np.concatenate([w, [1 - sum(w)]])
         N, K = Y.shape
-        grad = np.diag(np.ones(N) / (Y @ w)) @ Y
+        grad = np.diag(np.ones(N) / (Y @ w)) @ (Y[:,:K - 1] - Y[:,-1].reshape((N, 1)))
         return -grad.sum(axis=0)
 
-    def _eq_constraint(self, w):
-        # constraint for the optimization:
-        #    sum(w) == 1,
-        # so sum(w) - 1 == 0
-        return sum(w) - 1
+    def _constraint(self, w):
+        # -sum(w) + 1 > 0
+        return -sum(w) + 1
 
     def fit(self) -> MleStacking:
-        # get the raw log predictive densities, i.e. p(y_i | y_-i) from the
-        # pointwise_diagnostics object
         lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
         _, K = lpd_points.shape
+        exp_lpd = np.exp(lpd_points)
 
         res = minimize(
             fun=self._obj_fun,
             jac=self._grad,
-            args=(np.exp(lpd_points)),
-            x0=np.repeat(1 / K, K),
+            args=(exp_lpd),
+            x0=np.repeat(1 / K, K - 1),
             method="SLSQP",
-            constraints=dict(type="eq", fun=self._eq_constraint),
-            bounds=[(0, 1) for _ in range(K)],
+            constraints=dict(type="ineq", fun=self._constraint),
+            bounds=[(0, 1) for _ in range(K - 1)],
             options=self.optimizer_options,
         )
+        _weights = np.concatenate([res.x, [1 - sum(res.x)]])
 
         self._weights = {
             model: np.atleast_2d(weight)
-            for model, weight in zip(self.model_draws, res.x)
+            for model, weight in zip(self.model_draws, _weights)
         }
         self._model_info = res
         return self

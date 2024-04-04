@@ -1,5 +1,6 @@
 site_name: BayesBlend
 site_url: https://ledger.bayesblend.com/
+repo_url: https://github.com/LedgerInvesting/bayesblend/
 
 theme: 
   name: material

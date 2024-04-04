@@ -35,15 +35,15 @@ the weights, $\hat{w}$, are the solution to:
 
 \begin{equation}
     \tag{Stacking}
-    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} [y_{i} - \sum_{k=1}^{K} w_{k} f(y_{i}, p(\Theta_{k} \mid y_{i}))]
+    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} [y_{i} - \sum_{k=1}^{K} w_{k} f(y_{i}, p(\Theta_{k} \mid \mathbf{y}))]
 \end{equation}
 
 where $y_{i}$ is the (potentially out-of-sample) observed data, 
 $w_{k}$ is the weight for model $k$,
-and $f(y_{i}, p(\theta_{k} \mid y_{i})$
+and $f(y_{i}, p(\theta_{k} \mid \mathbf{y})$
 represents any scoring rule
 used to evaluate data point $y_{i}$ from
-the posterior distribution of model $k$, $p(\Theta_{k} \mid y_{i})$,
+the posterior distribution of model $k$, $p(\Theta_{k} \mid \mathbf{y})$,
 with parameters $\Theta_{k}$.
 In practice, we only need to estimate $K - 1$ weights as the final
 weight is known due to $\sum_{k=1} w = 1$.

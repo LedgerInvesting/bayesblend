@@ -67,8 +67,9 @@ stan_data = {
 fit1 = model.sample(chains=4, data=stan_data, seed=1)
 fit2 = model.sample(chains=4, data=stan_data, seed=2)
 
-# fit the MleStacking model
-mle_stacking_fit = MleStacking.from_cmdstanpy(dict(fit1=fit1, fit2=fit2)).fit()
+# fit the MleStacking model - fit() returns self
+mle_stacking_fit = MleStacking.from_cmdstanpy(dict(fit1=fit1, fit2=fit2))
+mle_stacking_fit.fit()
 
 # generate blended predictions
 mle_stacking_blend = mle_stacking_fit.predict()

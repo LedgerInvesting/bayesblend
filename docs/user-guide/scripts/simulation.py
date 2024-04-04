@@ -53,6 +53,16 @@ model_string = """
 
         y ~ normal(mu, sigma);
     }
+
+    generated quantities {
+        vector[N] post_pred;
+        vector[N] log_lik;
+
+        for(i in 1:N) {
+            log_lik[i] = normal_lpdf(y[i] | mu[i], sigma);
+            post_pred[i] = normal_rng(mu[i], sigma);
+        }
+    }
 """
 
 with open("regression.stan", "w") as stan_file:
@@ -62,5 +72,12 @@ model = csp.CmdStanModel(stan_file="regression.stan")
 
 fits = [
     model.sample(data={"N": N, "P": x.shape[1], "X": x, "y": y})
-    for x in (X[:,0].reshape((100, 1)), X[:,1].reshape((100, 1)), X)
+    for x in (X[:,0].reshape((N, 1)), X[:,1].reshape((N, 1)), X)
 ]
+
+stacking = bb.MleStacking.from_cmdstanpy(
+        {f"fit{i}": fit for i, fit in enumerate(fits)},
+)
+stacking.fit()
+stacking.weights
+
