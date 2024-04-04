@@ -97,9 +97,6 @@ name = "origin"
 type = "github"
 ignore_token_for_push = false
 
-[tool.semantic_release.remote.token]
-env = "GH_TOKEN"
-
 [tool.semantic_release.publish]
 dist_glob_patterns = ["dist/*"]
 upload_to_vcs_release = true
