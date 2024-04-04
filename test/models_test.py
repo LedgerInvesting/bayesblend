@@ -14,22 +14,26 @@ DATA_FILE = "test/stan_data/bernoulli_data.json"
 
 MODEL = CmdStanModel(stan_file=STAN_FILE)
 
-CFG = {"chains": 4, "parallel_chains": 4, "seed": 1234}
+CFG = {"chains": 4, "parallel_chains": 4}
+
+SEED = 1234
 
 with open(DATA_FILE, "r") as f:
     BERN_DATA = json.load(f)
 
 FIT = MODEL.sample(data=BERN_DATA, **CFG)
 
+RNG = np.random.RandomState(SEED)
+
 
 def make_draws(mu, p, n_samples=1000, n_datapoints=10, shape=None):
     shape = (n_samples, n_datapoints) if shape is None else shape
     return Draws(
         log_lik=np.array(
-            [np.random.normal(mu, 0.1, n_samples) for _ in range(n_datapoints)]
+            [RNG.normal(mu, 0.1, n_samples) for _ in range(n_datapoints)]
         ).T.reshape(shape),
         post_pred=np.array(
-            [np.random.choice([0, 1], size=n_samples, p=p) for _ in range(n_datapoints)]
+            [RNG.choice([0, 1], size=n_samples, p=p) for _ in range(n_datapoints)]
         ).T.reshape(shape),
     )
 
@@ -42,15 +46,15 @@ MODEL_DRAWS = {
 
 # extreme log_lik points to test that models can handle them
 MODEL_DRAWS_EXTREME = copy.copy(MODEL_DRAWS)
-MODEL_DRAWS_EXTREME["fit1"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
-MODEL_DRAWS_EXTREME["fit2"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
-MODEL_DRAWS_EXTREME["fit3"].log_lik[:, 0] = np.random.normal(-1e5, 0.1, 1000)
+MODEL_DRAWS_EXTREME["fit1"].log_lik[:, 0] = RNG.normal(-1e5, 0.1, 1000)
+MODEL_DRAWS_EXTREME["fit2"].log_lik[:, 0] = RNG.normal(-1e5, 0.1, 1000)
+MODEL_DRAWS_EXTREME["fit3"].log_lik[:, 0] = RNG.normal(-1e5, 0.1, 1000)
 
 DISCRETE_COVARIATES = {
     "dummy": ["group1"] * (BERN_DATA["N"] // 2) + ["group2"] * (BERN_DATA["N"] // 2)
 }
 
-CONTINUOUS_COVARIATES = {"metric": np.random.normal(size=BERN_DATA["N"])}
+CONTINUOUS_COVARIATES = {"metric": RNG.normal(size=BERN_DATA["N"])}
 
 CONTINUOUS_COVARIATES_ZERO = {"metric_zero": np.zeros(BERN_DATA["N"])}
 
@@ -60,7 +64,7 @@ def hierarchical_bayes_stacking():
     return HierarchicalBayesStacking(
         model_draws=MODEL_DRAWS,
         discrete_covariates=DISCRETE_COVARIATES,
-        seed=CFG["seed"],
+        seed=SEED,
     ).fit()
 
 
@@ -70,23 +74,24 @@ def hierarchical_bayes_stacking_pooling():
         model_draws=MODEL_DRAWS,
         discrete_covariates=DISCRETE_COVARIATES,
         partial_pooling=True,
-        seed=CFG["seed"],
+        seed=SEED,
     ).fit()
 
 
 @lru_cache
 def fit_models():
     mle_stacking = MleStacking(model_draws=MODEL_DRAWS).fit()
-    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS, seed=SEED).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
     pseudo_bma = PseudoBma(
         model_draws=MODEL_DRAWS,
         bootstrap=False,
+        seed=SEED,
     ).fit()
     pseudo_bma_plus = PseudoBma(
         model_draws=MODEL_DRAWS,
         n_boots=1000,
-        seed=1234,
+        seed=SEED,
     ).fit()
 
     return (
@@ -115,11 +120,25 @@ def test_model_blending_valid():
         fit_models()
     )
 
-    assert isinstance(mle_stacking.blend(), Draws)
-    assert isinstance(bayes_stacking.blend(), Draws)
-    assert isinstance(hier_bayes_stacking.blend(), Draws)
-    assert isinstance(pseudo_bma.blend(), Draws)
-    assert isinstance(pseudo_bma_plus.blend(), Draws)
+    assert isinstance(mle_stacking._blend(), Draws)
+    assert isinstance(bayes_stacking._blend(), Draws)
+    assert isinstance(hier_bayes_stacking._blend(), Draws)
+    assert isinstance(pseudo_bma._blend(), Draws)
+    assert isinstance(pseudo_bma_plus._blend(), Draws)
+
+
+def test_model_predictions_valid():
+    mle_stacking, bayes_stacking, hier_bayes_stacking, pseudo_bma, pseudo_bma_plus = (
+        fit_models()
+    )
+
+    assert isinstance(mle_stacking.predict(return_weights=True, seed=SEED), tuple)
+    assert isinstance(bayes_stacking.predict(return_weights=True, seed=SEED), tuple)
+    assert isinstance(
+        hier_bayes_stacking.predict(return_weights=True, seed=SEED), tuple
+    )
+    assert isinstance(pseudo_bma.predict(return_weights=True, seed=SEED), tuple)
+    assert isinstance(pseudo_bma_plus.predict(return_weights=True, seed=SEED), tuple)
 
 
 def test_equal_diagnstics_equal_weights():
@@ -130,14 +149,14 @@ def test_equal_diagnstics_equal_weights():
 
 def test_bayes_stacking_weight_extreme_elpd():
     mle_stacking = MleStacking(model_draws=MODEL_DRAWS_EXTREME).fit()
-    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS_EXTREME).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS_EXTREME, seed=SEED).fit()
     # MLE optimization will fail to converge, Bayes will succeed
     assert not mle_stacking.model_info.success
     assert bayes_stacking.model_info.summary()["R_hat"].max() < 1.01
 
 
 def test_bayes_stacking_weight_arrays():
-    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS).fit()
+    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS, seed=SEED).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
     # internal weights are full posteriors, and should always have shape[0]>1
     # hierarchical stacking should also have weights for each datapoint, or shape[1]==N
@@ -165,14 +184,34 @@ def test_hier_bayes_stacking_no_covariates_fails():
         )
 
 
+def test_hier_bayes_stacking_predict_with_new():
+    hier_bayes_stacking = hierarchical_bayes_stacking()
+
+    # predicting with new data will fail if new covariates given without
+    # new draws, and vice-versa. This is to catch issues where someone
+    # tries to predict by, e.g., only passing new covariates, where the
+    # model would then try to use those covariates to blend draws used
+    # to fit the averaging/stacking model.
+    with pytest.raises(ValueError, match="Either `model_draws`"):
+        hier_bayes_stacking.predict(discrete_covariates=DISCRETE_COVARIATES)
+
+    with pytest.raises(ValueError, match="Either `model_draws`"):
+        hier_bayes_stacking.predict(model_draws=MODEL_DRAWS)
+
+    assert hier_bayes_stacking.predict(
+        model_draws=MODEL_DRAWS, discrete_covariates=DISCRETE_COVARIATES, seed=SEED
+    )
+
+
 def test_hier_bayes_stacking_only_continuous_covariates():
     hier_bayes_stacking = HierarchicalBayesStacking(
         model_draws=MODEL_DRAWS,
         continuous_covariates=CONTINUOUS_COVARIATES,
         cmdstan_control=CFG,
+        seed=SEED,
     ).fit()
 
-    assert hier_bayes_stacking.predict(continuous_covariates=CONTINUOUS_COVARIATES)
+    assert hier_bayes_stacking.predict(seed=SEED)
 
 
 def test_hier_bayes_stacking_predict_different_covariates_fails():
@@ -187,12 +226,12 @@ def test_hier_bayes_stacking_predict_different_covariate_levels():
     # covariate name is the same, but there is a new level
     new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     with pytest.raises(ValueError):
-        hier_bayes_stacking.predict(discrete_covariates=new_level)
+        hier_bayes_stacking._predict_weights(discrete_covariates=new_level)
 
     # covariate name is the same, but there is a missing level
     # should generate predictions as normal without failing
     missing_level = {"dummy": ["group1"] * 4}
-    hier_bayes_stacking.predict(discrete_covariates=missing_level)
+    hier_bayes_stacking._predict_weights(discrete_covariates=missing_level)
 
 
 def test_hier_bayes_stacking_pooling():
@@ -219,17 +258,17 @@ def test_hier_bayes_stacking_predict_different_covariate_levels_pooling():
     # covariate name is the same, but there is a new level
     one_new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=one_new_level)
+        hier_bayes_stacking._predict_weights(discrete_covariates=one_new_level)
 
     two_new_levels = {"dummy": ["group1"] * 2 + ["group99"] * 2 + ["group98"] * 2}
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=two_new_levels)
+        hier_bayes_stacking._predict_weights(discrete_covariates=two_new_levels)
 
     three_new_levels = {
         "dummy": ["group1"] * 2 + ["group99"] * 2 + ["group98"] * 2 + ["group97"] * 2
     }
     with pytest.warns(UserWarning):
-        hier_bayes_stacking.predict(discrete_covariates=three_new_levels)
+        hier_bayes_stacking._predict_weights(discrete_covariates=three_new_levels)
 
 
 def test_hier_bayes_stacking_continuous_covariates_transform():
@@ -241,6 +280,7 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
             continuous_covariates=CONTINUOUS_COVARIATES,
             continuous_covariates_transform=transform,
             cmdstan_control=CFG,
+            seed=SEED,
         ).fit()
 
     assert all(k == v.continuous_covariates_transform for k, v in stacks.items())
@@ -266,12 +306,12 @@ def test_hier_bayes_stacking_continuous_covariates_transform():
 
 def test_hier_bayes_stacking_weight_predictions():
     hier_bayes_stacking = hierarchical_bayes_stacking()
-    weight_predictions_old_data = hier_bayes_stacking.predict(
+    weight_predictions_old_data = hier_bayes_stacking._predict_weights(
         discrete_covariates=DISCRETE_COVARIATES
     )
     new_covariates = {"dummy": ["group1"] * 2 + ["group2"] * 2}
-    weight_predictions_new_data = hier_bayes_stacking.predict(
-        discrete_covariates=new_covariates
+    weight_predictions_new_data = hier_bayes_stacking._predict_weights(
+        discrete_covariates=new_covariates,
     )
 
     # predictions from passing in same data should be approx equal to estimated weights
@@ -296,6 +336,7 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
     hier_bayes_stacking = hierarchical_bayes_stacking_pooling()
     # covariate name is the same, but there are new levels
     new_levels = {"dummy": ["group2"] * 5 + ["group10"] * 5}
+    new_draws = MODEL_DRAWS
 
     # set the group-level covariate coefficent to all 0s to force
     # new level coefficent to be exactly 0. The estimated weights
@@ -307,7 +348,12 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
     hier_bayes_stacking._coefficients["sigma_disc"] = np.zeros_like(
         hier_bayes_stacking._coefficients["sigma_disc"]
     )
-    predicted_weights = hier_bayes_stacking.predict(discrete_covariates=new_levels)
+    blended_draws, predicted_weights = hier_bayes_stacking.predict(
+        model_draws=new_draws,
+        discrete_covariates=new_levels,
+        return_weights=True,
+        seed=SEED,
+    )
 
     # predicitons where dummy=group10 should be the same as when dummy=group1,
     # and predictions for dummy=group2 should remain the same as before. Because
@@ -319,6 +365,7 @@ def test_hier_bayes_stacking_predictions_new_level_dummy_codes():
             hier_bayes_stacking.weights.values(), predicted_weights.values()
         )
     )
+    assert isinstance(blended_draws, Draws)
 
 
 def test_bayes_stacking_generation_with_priors():
@@ -337,20 +384,27 @@ def test_bayes_stacking_generation_with_priors():
         "lambda_loc": 0.5,
     }
 
-    bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS, cmdstan_control=CFG).fit()
+    bayes_stacking = BayesStacking(
+        model_draws=MODEL_DRAWS, cmdstan_control=CFG, seed=SEED
+    ).fit()
     bayes_stacking_priors = BayesStacking(
-        model_draws=MODEL_DRAWS, cmdstan_control=CFG, priors={"w_prior": [2, 2, 2]}
+        model_draws=MODEL_DRAWS,
+        cmdstan_control=CFG,
+        priors={"w_prior": [2, 2, 2]},
+        seed=SEED,
     ).fit()
     hier_bayes_stacking = HierarchicalBayesStacking(
         model_draws=MODEL_DRAWS,
         cmdstan_control=CFG,
         discrete_covariates=DISCRETE_COVARIATES,
+        seed=SEED,
     ).fit()
     hier_bayes_stacking_priors = HierarchicalBayesStacking(
         model_draws=MODEL_DRAWS,
         cmdstan_control=CFG,
         discrete_covariates=DISCRETE_COVARIATES,
         priors=hier_priors,
+        seed=SEED,
     ).fit()
 
     assert bayes_stacking.priors == {"w_prior": [1, 1, 1]}
@@ -376,6 +430,7 @@ def test_bayes_stacking_adaptive_prior_structure():
         discrete_covariates=DISCRETE_COVARIATES,
         adaptive=True,
         cmdstan_control=CFG,
+        seed=SEED,
     ).fit()
 
     _lambda = adaptive.model_info.stan_variable("lambda")
@@ -392,7 +447,7 @@ def test_blend_3d_variables():
         "fit2": make_draws(-1.3, [0.8, 0.2], shape=(100, 10, 10)),
         "fit3": make_draws(-1.7, [0.7, 0.3], shape=(100, 10, 10)),
     }
-    blend = MleStacking(model_draws).fit().blend()
+    blend = MleStacking(model_draws=model_draws).fit().predict(seed=SEED)
 
     assert isinstance(blend, Draws)
     assert all(blend.shape == draws.shape for draws in model_draws.values())
@@ -401,3 +456,12 @@ def test_blend_3d_variables():
 def test_models_from_cmdstanpy():
     model_fits = dict(fit1=FIT, fit2=FIT)
     assert MleStacking.from_cmdstanpy(model_fits)
+
+
+def test_seed():
+    blend1 = MleStacking(model_draws=MODEL_DRAWS).fit().predict(seed=1)
+    blend2 = MleStacking(model_draws=MODEL_DRAWS).fit().predict(seed=2)
+    blend3 = MleStacking(model_draws=MODEL_DRAWS).fit().predict(seed=1)
+
+    assert np.array_equal(blend1.log_lik, blend3.log_lik)
+    assert not np.array_equal(blend1.log_lik, blend2.log_lik)

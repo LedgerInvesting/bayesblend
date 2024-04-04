@@ -18,7 +18,7 @@ The `BayesBlendModel` is an abstract base class that is subclassed into the foll
 - `HierarchicalBayesStacking`
 - `PseudoBma`
 
-Each of these models takes a dictionary of `Draws` objects as input (one for each underlying substantive model of interest). The core functionality of each `BayesBlendModel` is then housed in the `.fit` and `.blend` methods. The `.fit` method fits the associated averaging/stacking model given the `Draws` fit data, and the latter returns a new `Draws` object that blends together the posterior predictions across substantive models given the estimated averaging/stacking parameters. 
+Each of these models takes a dictionary of `Draws` objects as input (one for each underlying substantive model of interest). The core functionality of each `BayesBlendModel` is then housed in the `.fit` and `.predict` methods. The `.fit` method fits the associated averaging/stacking model given the `Draws` fit data, and the latter returns a new `Draws` object that blends together the posterior predictions across substantive models given the estimated averaging/stacking parameters. 
 
 ## Example
 
@@ -54,7 +54,7 @@ with open("bernoulli.stan", "w") as f:
     f.write(stan_string)
 
 # instantiate a model
-model = CmdStanModel(stan_file="bernoulli.stan")
+stan_model = CmdStanModel(stan_file="bernoulli.stan")
 
 # data for the model
 stan_data = {
@@ -63,12 +63,13 @@ stan_data = {
 }
 
 # fit model to data (pretend these are different models!)
-fit1 = model.sample(chains=4, data=stan_data, seed=1)
-fit2 = model.sample(chains=4, data=stan_data, seed=2)
+fit1 = stan_model.sample(chains=4, data=stan_data, seed=1)
+fit2 = stan_model.sample(chains=4, data=stan_data, seed=2)
 
-# fit the MleStacking model
-mle_stacking_fit = MleStacking.from_cmdstanpy(dict(fit1=fit1, fit2=fit2)).fit()
+# initialize and fit the MleStacking model
+blend_model = MleStacking.from_cmdstanpy(dict(fit1=fit1, fit2=fit2))
+blend_model.fit()
 
 # generate blended predictions
-mle_stacking_blend = mle_stacking_fit.blend()
+blended_draws = blend_model.predict()
 ```
