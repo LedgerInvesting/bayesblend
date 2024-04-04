@@ -71,5 +71,17 @@ fit2 = model.sample(chains=4, data=stan_data, seed=2)
 mle_stacking_fit = MleStacking.from_cmdstanpy(dict(fit1=fit1, fit2=fit2)).fit()
 
 # generate blended predictions
-mle_stacking_blend = mle_stacking_fit.blend()
+mle_stacking_blend = mle_stacking_fit.predict()
 ```
+
+The `mle_stacking_blend` object is a `bayesblend.Draws` object.
+
+The particular weights estimated in the stacking model can be inspected
+using `mle_stacking_fit.weights`. 
+
+For models like hierarchical stacking with covariates, the weights during
+prediction might differ from the weights estimated in the stacking model
+because the weights have their own posterior predictive distribution.
+For this instance, setting `return_weights=True` in `BayesBlendModel.predict` 
+will return a tuple of the blended predictions and a dictionary of weights
+used during prediction.
