@@ -14,13 +14,9 @@ build:
       - unzip awscliv2.zip
       - ./aws/dist/aws codeartifact login --tool pip --repository python-ds --domain ledger-data-science --domain-owner 777486332181 --region us-east-1
 	post_create_environment:
-      # Install poetry
-      # https://python-poetry.org/docs/#installing-manually
-      - python3.11 -m pip install poetry
-    post_install:
-      # Install dependencies with 'docs' dependency group
-      # https://python-poetry.org/docs/managing-dependencies/#dependency-groups
-      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
+	  - python3.11 -m pip install poetry
+	post_install:
+	  - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
 
 
 mkdocs:
