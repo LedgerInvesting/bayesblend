@@ -102,13 +102,17 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'chore(release):')
     runs-on: ubuntu-latest
     concurrency: release
+    permissions:
+      id-token: write
+      contents: write
     steps: 
       - uses: actions/checkout@v3
         with: 
           fetch-depth: 0
+          token: ${{ secrets.GH_TOKEN }}
       - name: Python Semantic Release
         uses: python-semantic-release/python-semantic-release@v9.4.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GH_TOKEN }}
       
     
