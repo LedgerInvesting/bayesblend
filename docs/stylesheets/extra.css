@@ -1,0 +1,12 @@
+u {
+    border-bottom: 1px dotted;
+    text-decoration: none;
+}
+
+a {
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

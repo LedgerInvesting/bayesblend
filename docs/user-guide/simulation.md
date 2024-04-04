@@ -6,9 +6,14 @@ weights from a set of simulated models.*
 ----------------------------------------------------------
 
 The simplest example to demonstrate the utility of BayesBlend,
-and model blending more generally, is to use simulated data
+and model blending more generally, is to use simulated univariate data
 of size $N$ from a set of $K$ models, $\mathcal{M} = \{M_{1}, M_{2}, ..., M_{k}\}$,
 with a known $N \times K$ matrix of mixture weights, $\mathbf{W}$.
+Indeed, model averaging via stacking is akin to fitting a mixture model
+across $\mathcal{M}$, rather than the two-step stacking process
+(see section 4.3 of
+[Yao *et al.* (2018)](http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf)
+for more information).
 This replicates the $\mathcal{M}$-closed setting, as described by
 [Bernado & Smith (1994)](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316870),
 [Yao *et al.* (2018)](http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf)

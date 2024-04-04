@@ -20,9 +20,9 @@ The `BayesBlendModel` is an abstract base class that is subclassed into the foll
 
 Each of these models takes a dictionary of `Draws` objects as input (one for each underlying substantive model of interest). The core functionality of each `BayesBlendModel` is then housed in the `.fit` and `.blend` methods. The `.fit` method fits the associated averaging/stacking model given the `Draws` fit data, and the latter returns a new `Draws` object that blends together the posterior predictions across substantive models given the estimated averaging/stacking parameters. 
 
-# Example
+## Example
 
-The below example expands on the `cmdstanpy` example [here](https://github.com/stan-dev/cmdstanpy?tab=readme-ov-file#example), fitting a bernoulli model twice and then blending the results together.
+The below example expands on the `cmdstanpy` example [here](https://github.com/stan-dev/cmdstanpy?tab=readme-ov-file#example), fitting a Bernoulli model twice and then blending the results together.
 
 ```python
 # simple bernoulli model
