@@ -99,7 +99,7 @@ jobs:
 
   release:
     needs: [tests, mypy, ruff]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, 'chore(release):')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     concurrency: release
     permissions:
@@ -111,8 +111,16 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_TOKEN }}
       - name: Python Semantic Release
+        id: release
         uses: python-semantic-release/python-semantic-release@v9.4.0
         with:
           github_token: ${{ secrets.GH_TOKEN }}
+      - name: Publish and CI version update
+        if: steps.release.outputs.released == 'true'
+        # see https://github.com/python-semantic-release/upload-to-gh-release
+        uses: python-semantic-release/upload-to-gh-release@main
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
       
     
