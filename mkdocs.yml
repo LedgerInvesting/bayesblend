@@ -15,8 +15,8 @@ nav:
   - Home: index.md
   - Installation: user-guide/installation.md
   - Contributing: developer-guide/contributing.md
-  - User Guide: user-guide/
-  - Developer Guide: developer-guide/
+  - User Guide: user-guide/index.md
+  - Developer Guide: developer-guide/index.md
 
 markdown_extensions:
   - pymdownx.arithmatex:

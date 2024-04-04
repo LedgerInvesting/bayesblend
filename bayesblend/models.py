@@ -1097,4 +1097,4 @@ def _normalize_weights(weights: np.ndarray):
     """Normalize weights due to rounding error, witch strict value check"""
     if not np.isclose(sum(weights), 1, atol=1e-7):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
-    return weights / sum(weights)
+    return np.array([max(0, w) for w in weights / sum(weights)])

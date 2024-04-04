@@ -72,13 +72,77 @@ with open("regression.stan", "w") as stan_file:
 
 model = csp.CmdStanModel(stan_file="regression.stan")
 
+mixture_string = """
+    data {
+        int<lower=0> N;
+        int<lower=2> K;
+        int<lower=1> P;
+        matrix[N, P] X;
+        vector[N] y;
+    }
+
+    parameters {
+        real alpha;
+        vector[P] beta;
+        real<lower=0> sigma;
+        vector[K - 1] w_raw;
+    }
+
+    transformed parameters {
+        simplex[K] w;
+        w[:K - 1] = inv_logit(w_raw);
+        w[K] = 1 - sum(w[:K - 1]);
+    }
+
+    model {
+        alpha ~ normal(0, 10);
+        beta ~ normal(0, 10);
+        sigma ~ normal(0, 10);
+        w_raw ~ normal(0, 5);
+
+        for(i in 1:N) {
+            vector[K] targets = [
+                normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
+                normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
+                normal_lpdf(y[i] | alpha + X[i,:] * beta, sigma)
+            ]';
+            target += log_mix(w, targets);
+        }
+    }
+
+    generated quantities {
+        vector[N] post_pred;
+
+        for(i in 1:N) {
+            vector[K] targets_pred = [
+                normal_rng(alpha + beta[1] * X[i,1], sigma),
+                normal_rng(alpha + beta[2] * X[i,2], sigma),
+                normal_rng(alpha + X[i,:] * beta, sigma)
+            ]';
+            post_pred[i] = w' * targets_pred;
+        }
+    }
+
+"""
+
+with open("mixture.stan", "w") as stan_file:
+    stan_file.write(mixture_string)
+
+mixture = csp.CmdStanModel(stan_file="mixture.stan")
+
+fit_mixture = mixture.sample(
+    data={"N": N, "P": P, "K": K, "X": X, "y": y},
+    seed=SEED
+)
+
 fits = [
-    model.sample(data={"N": N, "P": x.shape[1], "X": x, "y": y})
+    model.sample(data={"N": N, "P": x.shape[1], "X": x, "y": y}, seed=SEED)
     for x in (X[:,0].reshape((N, 1)), X[:,1].reshape((N, 1)), X)
 ]
 
-stacking = bb.MleStacking.from_cmdstanpy(
+stacking = bb.BayesStacking.from_cmdstanpy(
         {f"fit{i}": fit for i, fit in enumerate(fits)},
+        seed=SEED,
 )
 stacking.fit()
 
