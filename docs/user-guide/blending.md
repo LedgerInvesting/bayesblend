@@ -35,7 +35,7 @@ the weights, $\hat{w}$, are the solution to:
 
 \begin{equation}
     \tag{Stacking}
-    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} [y_{i} - \sum_{k=1}^{K} w_{k} f(y_{i}, p(\Theta_{k} \mid \mathbf{y}))]
+    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} \sum_{k=1}^{K} w_{k} f(y_{i}, p(\Theta_{k} \mid \mathbf{y}))
 \end{equation}
 
 where $y_{i}$ is the (potentially out-of-sample) observed data, 

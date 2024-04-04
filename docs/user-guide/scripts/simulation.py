@@ -14,7 +14,7 @@ alpha = 0
 sigma = 1
 X = rng.normal(size=(N, P))
 beta = np.array([1.5, 0.2])
-w = [0.15, 0.15, 0.7]
+w = [0.2, 0.2, 0.6]
 W = np.array(w * N).reshape((N, K))
 
 mus = np.array([
@@ -77,9 +77,8 @@ fits = [
     for x in (X[:,0].reshape((N, 1)), X[:,1].reshape((N, 1)), X)
 ]
 
-stacking = bb.BayesStacking.from_cmdstanpy(
+stacking = bb.MleStacking.from_cmdstanpy(
         {f"fit{i}": fit for i, fit in enumerate(fits)},
-        seed=SEED,
 )
 stacking.fit()
 

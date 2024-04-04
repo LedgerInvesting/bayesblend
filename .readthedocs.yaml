@@ -12,7 +12,7 @@ build:
     pre_install:
       - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
       - unzip awscliv2.zip
-      - ./aws/dist/aws codeartifact login --tool pip --repository python-ds --domain ledger-data-science --domain-owner 777486332181 --region us-east-1
+      - ./aws/dist/aws codeartifact login --tool pip --repository python-ds --domain ledger-data-science --domain-owner 054739135172 --region us-east-2
 	post_create_environment:
 	  - python3.11 -m pip install poetry
 	post_install:
