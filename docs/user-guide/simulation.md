@@ -1,4 +1,4 @@
-# Simulated blending weights via mixture modelling
+# Recovering blending weights using simulated data
 
 *This guide introduces a simple example of recovering blending
 weights from a set of simulated models.*

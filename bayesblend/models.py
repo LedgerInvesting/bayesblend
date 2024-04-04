@@ -233,12 +233,14 @@ class BayesBlendModel(ABC):
         model_fits: Dict[str, CmdStanMCMC],
         log_lik_name: str = "log_lik",
         post_pred_name: str = "post_pred",
+        **kwargs,
     ) -> BayesBlendModel:
         return cls(
             {
                 model: Draws.from_cmdstanpy(fit, log_lik_name, post_pred_name)
                 for model, fit in model_fits.items()
-            }
+            },
+            **kwargs,
         )
 
 
