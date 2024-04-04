@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install poetry
-        run: pipx install poetry
+        run: python3.11 -m pipx install poetry
       - name: Install dependencies
         run: |
           poetry env use "3.11"
