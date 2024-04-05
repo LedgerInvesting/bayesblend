@@ -288,7 +288,7 @@ class MleStacking(BayesBlendModel):
         return -grad.sum(axis=0)
 
     def _constraint(self, w):
-        # -sum(w) + 1 > 0
+        # sum(w) - 1 = 0
         return sum(w) - 1
 
     def fit(self) -> MleStacking:
