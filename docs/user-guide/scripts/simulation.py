@@ -108,7 +108,7 @@ ax[1].fill_between(
     [0]*len(densities[0][k]),
     color="skyblue",
     alpha=0.5,
-    label=f"post pred",
+    label="post pred",
 )
 ax[1].plot(*density(y), linewidth=0)
 ax[1].fill_between(
@@ -116,7 +116,7 @@ ax[1].fill_between(
     [0]*len(densities[0][k]),
     color="grey",
     alpha=0.5,
-    label=f"y",
+    label="y",
 )
 ax[1].set_xlabel("y")
 ax[1].legend(frameon=False, loc="upper right")
@@ -248,7 +248,7 @@ ax[1].fill_between(
     [0]*len(densities[0][k]),
     color="grey",
     alpha=0.3,
-    label=f"y",
+    label="y",
 )
 ax[1].set_xlabel("y")
 ax[1].legend(frameon=False, loc="upper right")
