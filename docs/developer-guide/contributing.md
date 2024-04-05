@@ -53,12 +53,53 @@ Note that both Ruff and MyPy are required CI/CD checks that will block merging a
 
 ## Versioning
 
-TODO
+This project uses semantic versioning, primarily following the [Angular convention](https://gist.github.com/brianclements/841ea7bffdb01346392c). Package releases are auto-generated based on commit messages, so it is important to strictly follow the semantic versioning convention to ensure that releases are deployed as intended. Angular commit messages follow the below template: 
 
-## Pull Requests
+```
+<type>[optional scope]: <description>
 
-### Steps
+[optional body]
 
-### Branch naming
+[optional footer]
+```
 
-TODO
+Available values for `<type>` include:
+
+- `build`: Changes that affect the build system or external dependencies 
+- `ci`: Changes to the CI configuration files and scripts
+- `docs`: Documentation only changes
+- `feat`: A new feature
+- `fix`: A bug fix
+- `perf`: A code change that improves performance
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `test`: Adding missing tests or correcting existing tests
+
+`<scope>` is optional, and when specified it should refer to the name of the module (or package) being modified per the commit. 
+
+`<description>` should provide a succinct summary of the change (with no period at the end). 
+
+`<body>` is optional in our case, but is strongly recommended. It should explain why the change is being made, including comparisons of previous vs new behavior to clarify the change. 
+
+`<footer>` is optional, and when specified it should contain information about breaking changes, deprecations, and is also a place to reference issues that the PR resolves. For example, `Fixes: #11` if the issues resolves issue 11. Breaking changes and deprecations notices should also be included in the footer along with descriptions to clarify the change/instructions for future use. For example: 
+
+```
+BREAKING CHANGE: <breaking change summary>
+<BLANK LINE>
+<breaking change description + migration instructions>
+<BLANK LINE>
+<BLANK LINE>
+Fixes #<issue number>
+```
+
+or 
+
+```
+DEPRECATED: <what is deprecated>
+<BLANK LINE>
+<deprecation description + recommended update path>
+<BLANK LINE>
+<BLANK LINE>
+Closes #<pr number>
+```
+
+These conventions should be thought of as guidelines, but we do recommend sticking to them as closely as possible to make the contribution process smooth for all involved. 
