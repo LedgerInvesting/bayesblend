@@ -309,6 +309,7 @@ class MleStacking(BayesBlendModel):
             options=self.optimizer_options,
         )
         _weights = np.concatenate([res.x, [1 - sum(res.x)]])
+        breakpoint()
 
         self._weights = {
             model: np.atleast_2d(weight)

@@ -5,8 +5,14 @@ repo_url: https://github.com/LedgerInvesting/bayesblend/
 theme: 
   name: material
   palette: 
-    scheme: default
-    primary: indigo
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Light mode
   features:
     - content.code.copy
 
