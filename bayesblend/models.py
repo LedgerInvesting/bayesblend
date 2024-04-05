@@ -215,6 +215,8 @@ class BayesBlendModel(ABC):
         for model, draws in model_draws.items():
             blend_id = blend_idx[model]
             for par, samples in draws:
+                if samples is None:
+                    continue
                 blended_list = [
                     list(samples[draws_idx == blend_id, idx])
                     for idx, draws_idx in enumerate(draws_idx_list)
@@ -271,7 +273,6 @@ class MleStacking(BayesBlendModel):
     def _obj_fun(self, w, *args):
         """Negative sum of the weighted log predictive densities"""
         Y = args[0]
-        w = np.concatenate([w, [1 - sum(w)]])
         log_scores = np.log(Y @ w)
         return -sum(log_scores)
 
@@ -279,19 +280,16 @@ class MleStacking(BayesBlendModel):
         """Jacobian of the objective function.
 
         The gradient of log(Y @ w) wrt w is 1/(Y @ w) Y, using
-        the chain rule. Since we are only estimating K - 1
-        weights, we can correct the gradient by multiplying
-        by Y[:,:K - 1] - Y[:,-1].
+        the chain rule. 
         """
         Y = args[0]
-        w = np.concatenate([w, [1 - sum(w)]])
         N, K = Y.shape
-        grad = np.diag(np.ones(N) / (Y @ w)) @ (Y[:,:K - 1] - Y[:,-1].reshape((N, 1)))
+        grad = np.diag(np.ones(N) / (Y @ w)) @ Y
         return -grad.sum(axis=0)
 
     def _constraint(self, w):
         # -sum(w) + 1 > 0
-        return -sum(w) + 1
+        return sum(w) - 1
 
     def fit(self) -> MleStacking:
         lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
@@ -302,18 +300,16 @@ class MleStacking(BayesBlendModel):
             fun=self._obj_fun,
             jac=self._grad,
             args=(exp_lpd),
-            x0=np.repeat(1 / K, K - 1),
+            x0=np.repeat(1 / K, K),
             method="SLSQP",
-            constraints=dict(type="ineq", fun=self._constraint),
-            bounds=[(0, 1) for _ in range(K - 1)],
+            constraints=dict(type="eq", fun=self._constraint),
+            bounds=[(0, 1) for _ in range(K)],
             options=self.optimizer_options,
         )
-        _weights = np.concatenate([res.x, [1 - sum(res.x)]])
-        breakpoint()
 
         self._weights = {
             model: np.atleast_2d(weight)
-            for model, weight in zip(self.model_draws, _weights)
+            for model, weight in zip(self.model_draws, res.x)
         }
         self._model_info = res
         return self

@@ -25,6 +25,9 @@ marginal likelihood or evidence for each model in $\mathcal{M}$.
 Because this quantity is often difficult to calculate,
 *pseudo Bayesian model averaging* (pseudo-BMA) has been introduced
 as a method of approximating BMA using information criteria.
+In addition, *pseudo Bayesian model averaging plus* (pseudo-BMA+)
+accounts for uncertainty in the information criteria by applying
+the Bayesian bootstrap to log likelihood vectors.
 
 [Stacking](
 https://en.wikipedia.org/wiki/Ensemble_learning#Stacking
@@ -45,8 +48,6 @@ represents any scoring rule
 used to evaluate data point $y_{i}$ from
 the posterior distribution of model $k$, $p(\Theta_{k} \mid \mathbf{y})$,
 with parameters $\Theta_{k}$.
-In practice, we only need to estimate $K - 1$ weights as the final
-weight is known due to $\sum_{k=1} w = 1$.
 
 The appeal of stacking, apart from its reported improved predictive
 accuracy over other procedures (see e.g. 
@@ -61,7 +62,9 @@ The weights can also be a function of covariates,
 and/or can be estimated hierarchically. 
 These extensions have generally been referred to
 as hierarchical Bayesian stacking (see
-[Yao *et al.*, 2021](https://arxiv.org/abs/2101.08954)).
+[Yao *et al.*, 2021](https://arxiv.org/abs/2101.08954))
+because of their use of a fully Bayesian model
+to estimate the weights.
 
 ## Blending
 

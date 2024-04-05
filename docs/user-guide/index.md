@@ -5,5 +5,5 @@ that illustrate the use of BayesBlend.
 
 * [Getting started](getting-started.md)
 * [Model averaging, stacking and blending](blending.md)
-* [Recovering blending weights using simulated data](simulation.md)
+* [Comparing mixture modelling to pseudo-BMA+ and stacking](simulation.md)
 * [Integration with Arviz](arviz.md)
