@@ -8,6 +8,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
 
+import arviz as az
 import numpy as np
 import pandas as pd
 from cmdstanpy import CmdStanMCMC, CmdStanModel
@@ -240,6 +241,35 @@ class BayesBlendModel(ABC):
                 for model, fit in model_fits.items()
             }
         )
+
+    @classmethod
+    def from_arviz(
+        cls,
+        model_fits: Dict[str, az.InferenceData],
+        log_lik_name: str = "log_lik",
+        post_pred_name: str = "post_pred",
+    ) -> BayesBlendModel:
+        return cls(
+            {
+                model: Draws.from_arviz(fit, log_lik_name, post_pred_name)
+                for model, fit in model_fits.items()
+            }
+        )
+
+    @classmethod
+    def from_lpd(
+        cls,
+        lpd: Dict[str, np.ndarray],
+        post_pred: Dict[str, np.ndarray],
+    ):
+        return cls(
+            {
+                name: Draws.from_lpd(lpd=ll, post_pred=pp)
+                for (name, ll), pp
+                in zip(*[lpd.items(), post_pred.values()])
+            }
+        )
+
 
 
 class MleStacking(BayesBlendModel):
