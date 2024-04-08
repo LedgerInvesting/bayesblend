@@ -8,6 +8,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
 
+import arviz as az
 import numpy as np
 import pandas as pd
 from cmdstanpy import CmdStanMCMC, CmdStanModel
