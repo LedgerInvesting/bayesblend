@@ -32,23 +32,23 @@ mixture_string = """
 
     parameters {
         real alpha;
-        vector[P] beta;
+        vector[P + 2] beta;
         real<lower=0> sigma;
         simplex[K] w;
     }
 
     model {
-        alpha ~ normal(0, 10);
-        beta ~ normal(0, 10);
-        sigma ~ normal(0, 10);
+        alpha ~ normal(0, 1);
+        beta ~ normal(0, 1);
+        sigma ~ normal(0, 1);
 
         for(i in 1:N) {
-            vector[K] lps = [
+            row_vector[K] lps = [
                 normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
                 normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
-                normal_lpdf(y[i] | alpha + X[i] * beta, sigma)
-            ]';
-            target += log_sum_exp(log(w) + lps);
+                normal_lpdf(y[i] | alpha + X[i] * beta[3:], sigma)
+            ];
+            target += log_sum_exp(log(w) + lps');
         }
     }
 
@@ -56,21 +56,21 @@ mixture_string = """
         vector[N] post_pred;
 
         for(i in 1:N) {
-            vector[K] preds = [
+            row_vector[K] preds = [
                 normal_rng(alpha + beta[1] * X[i,1], sigma),
                 normal_rng(alpha + beta[2] * X[i,2], sigma),
-                normal_rng(alpha + X[i] * beta, sigma)
-            ]';
+                normal_rng(alpha + X[i] * beta[3:], sigma)
+            ];
             int mix_idx = categorical_rng(w);
             post_pred[i] = preds[mix_idx];
         }
     }
 """
 
-with open("mixture.stan", "w") as stan_file:
+with open("docs/user-guide/scripts/mixture.stan", "w") as stan_file:
     stan_file.write(mixture_string)
 
-mixture = csp.CmdStanModel(stan_file="mixture.stan")
+mixture = csp.CmdStanModel(stan_file="docs/user-guide/scripts/mixture.stan")
 
 fit_mixture = mixture.sample(
     data={"N": N, "P": P, "K": K, "X": X[:,:2], "y": y},
@@ -168,10 +168,10 @@ regression_string = """
     }
 """
 
-with open("regression.stan", "w") as stan_file:
+with open("docs/user-guide/scripts/regression.stan", "w") as stan_file:
     stan_file.write(regression_string)
 
-regression = csp.CmdStanModel(stan_file="regression.stan")
+regression = csp.CmdStanModel(stan_file="docs/user-guide/scripts/regression.stan")
 
 regression_predictors = (
     X[:,0].reshape((N, 1)), 

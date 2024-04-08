@@ -166,49 +166,49 @@ directly, producing a coherent posterior predictive distribution
 in the `generated quantities` section:
 
 ```stan title="mixture.stan"
-data {
-    int<lower=0> N;
-    int<lower=2> K;
-    int<lower=1> P;
-    matrix[N, P] X;
-    vector[N] y;
-}
-
-parameters {
-    real alpha;
-    vector[P] beta;
-    real<lower=0> sigma;
-    simplex[K] w;
-}
-
-model {
-    alpha ~ normal(0, 10);
-    beta ~ normal(0, 10);
-    sigma ~ normal(0, 10);
-
-    for(i in 1:N) {
-        vector[K] lps = [
-            normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
-            normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
-            normal_lpdf(y[i] | alpha + X[i] * beta, sigma)
-        ]';
-        target += log_sum_exp(log(w) + lps);
+    data {
+        int<lower=0> N;
+        int<lower=2> K;
+        int<lower=1> P;
+        matrix[N, P] X;
+        vector[N] y;
     }
-}
 
-generated quantities {
-    vector[N] post_pred;
-
-    for(i in 1:N) {
-        vector[K] preds = [
-            normal_rng(alpha + beta[1] * X[i,1], sigma),
-            normal_rng(alpha + beta[2] * X[i,2], sigma),
-            normal_rng(alpha + X[i] * beta, sigma)
-        ]';
-        int mix_idx = categorical_rng(w);
-        post_pred[i] = preds[mix_idx];
+    parameters {
+        real alpha;
+        vector[P + 2] beta;
+        real<lower=0> sigma;
+        simplex[K] w;
     }
-}
+
+    model {
+        alpha ~ normal(0, 1);
+        beta ~ normal(0, 1);
+        sigma ~ normal(0, 1);
+
+        for(i in 1:N) {
+            row_vector[K] lps = [
+                normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
+                normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
+                normal_lpdf(y[i] | alpha + X[i] * beta[3:], sigma)
+            ];
+            target += log_sum_exp(log(w) + lps');
+        }
+    }
+
+    generated quantities {
+        vector[N] post_pred;
+
+        for(i in 1:N) {
+            row_vector[K] preds = [
+                normal_rng(alpha + beta[1] * X[i,1], sigma),
+                normal_rng(alpha + beta[2] * X[i,2], sigma),
+                normal_rng(alpha + X[i] * beta[3:], sigma)
+            ];
+            int mix_idx = categorical_rng(w);
+            post_pred[i] = preds[mix_idx];
+        }
+    }
 ```
 
 ```python title="Fit the mixture model"
@@ -222,9 +222,9 @@ fit_mixture = mixture.sample(
 
 The figure below shows the estimated posterior weights,
 alongside the posterior predictive distribution.
-Model 1 is given most weight (mean = 63.4%), followed by
-model 3 (mean = 35%), and model 2 is given hardly any weight
-at all (mean = 1.5%).
+Model 1 is given most weight (mean = 63.7%), followed by
+model 3 (mean = 35.0%), and model 2 is given hardly any weight
+at all (mean = 1.4%).
 
 ![mixture_weights](scripts/figures/mixture-weights.png)
 *Mixture model weights and predictions*
