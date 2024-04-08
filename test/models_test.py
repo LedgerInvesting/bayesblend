@@ -7,7 +7,8 @@ import numpy as np
 import pytest
 from cmdstanpy import CmdStanModel
 
-from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma, Draws
+from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
+from bayesblend.io import Draws
 
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
