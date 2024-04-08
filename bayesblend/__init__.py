@@ -1,7 +1,7 @@
 from .models import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
 from .io import Draws
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 __all__ = [
     "MleStacking",

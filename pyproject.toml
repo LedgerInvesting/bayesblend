@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bayesblend"
-version = "0.0.2"
+version = "0.0.3"
 description = "Easy to use Bayesian model averaging and Bayesian stacking for all your model blending needs!"
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"

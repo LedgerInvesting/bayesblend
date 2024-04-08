@@ -2,7 +2,44 @@
 
 
 
+## v0.0.3 (2024-04-08)
+
+### Documentation
+
+* docs: update readme links to latest ([`9b035b8`](https://github.com/LedgerInvesting/bayesblend/commit/9b035b8271598995599370f61d6b3984c383c3b6))
+
+* docs: re-run mixture model with separate coefficients ([`da345c4`](https://github.com/LedgerInvesting/bayesblend/commit/da345c43cd313c175339cbedea5f4a5f76a59196))
+
+### Unknown
+
+* Merge pull request #17 from LedgerInvesting/make-docs
+
+`MkDocs` documentation ([`aecd31c`](https://github.com/LedgerInvesting/bayesblend/commit/aecd31c7f4cf546ec9439e4b6888e8eaa40c8e9f))
+
+
 ## v0.0.2 (2024-04-08)
+
+### Documentation
+
+* docs: Arviz -&gt; ArviZ ([`69bed7f`](https://github.com/LedgerInvesting/bayesblend/commit/69bed7f0b29e8bbbef40ae496a93de1967de830d))
+
+* docs: Add Arviz integration user guid
+
+Add examples of using `from_arviz`, `to_arviz`,
+and `from_lpd` in the context of `arviz.InferenceData`
+objects. ([`10284e7`](https://github.com/LedgerInvesting/bayesblend/commit/10284e73f6661346de1820e67d1b54323de5662d))
+
+* docs: fix ruff ([`130a650`](https://github.com/LedgerInvesting/bayesblend/commit/130a650ee417d2bb410add581fe6a9565162e665))
+
+* docs: ignore mypy errors in scripts ([`9fbee5f`](https://github.com/LedgerInvesting/bayesblend/commit/9fbee5f19c6db3c383a1ea7b24a18c8f483c2db9))
+
+* docs: add figures in user-guide ([`549ac0a`](https://github.com/LedgerInvesting/bayesblend/commit/549ac0a9a97be07dac39216918c877152e4e172b))
+
+* docs: add comparison vignette
+
+Add a comparison notebook using simulated data.
+
+Addresses #10 ([`16f12b8`](https://github.com/LedgerInvesting/bayesblend/commit/16f12b805d1872dc6453dd1f7a8bf09a307c6ce7))
 
 ### Fix
 
@@ -12,6 +49,12 @@
 
 Fill the `log_likelihood` and `posterior_predictive` slots of
 InferenceData directly, don&#39;t just pass a large dict. ([`3033f3b`](https://github.com/LedgerInvesting/bayesblend/commit/3033f3b3282e946479379e17e9c5df083c380e07))
+
+* fix: add poetry.lock back in ([`9e8869b`](https://github.com/LedgerInvesting/bayesblend/commit/9e8869b2bef681cd370ba0f1b646eb4bdec2a4e2))
+
+### Refactor
+
+* refactor: remove unecessary comment ([`e7937a2`](https://github.com/LedgerInvesting/bayesblend/commit/e7937a240b42942c967d252c3fd14d91a70d4697))
 
 ### Test
 
@@ -23,9 +66,13 @@ InferenceData directly, don&#39;t just pass a large dict. ([`3033f3b`](https://g
 
 ### Unknown
 
+* Merge branch &#39;main&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into make-docs ([`eef7772`](https://github.com/LedgerInvesting/bayesblend/commit/eef7772ea5bdd6cbd06fe3d2567751db6e6d8d73))
+
 * Merge pull request #23 from LedgerInvesting/feature-arviz-wrappers
 
 feature: add from/to arviz wrappers ([`3022a17`](https://github.com/LedgerInvesting/bayesblend/commit/3022a17cf62fdbaeb0acabdae17614d24552ac0a))
+
+* Merge branch &#39;feature-arviz-wrappers&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into make-docs ([`810ac4b`](https://github.com/LedgerInvesting/bayesblend/commit/810ac4b5f52f638013520d4901a59258fa44b522))
 
 * feature: Create BayesBlendModel objects from `lpd` values
 
@@ -35,6 +82,8 @@ and then wanting to blend predictions. This adds a `from_lpd` method
 to allow us to handle these cases. ([`31b3592`](https://github.com/LedgerInvesting/bayesblend/commit/31b3592aec8a7ccfffcab3fb8573f2bce05c0c77))
 
 * feature: add from/to arviz wrappers ([`eb91897`](https://github.com/LedgerInvesting/bayesblend/commit/eb91897abae1e158e4c8928d062097be69688f48))
+
+* Merge branch &#39;main&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into make-docs ([`6c4abd1`](https://github.com/LedgerInvesting/bayesblend/commit/6c4abd1531deb439e94250fcbf470afbaf47b5e0))
 
 
 ## v0.0.1 (2024-04-05)
@@ -59,13 +108,45 @@ to allow us to handle these cases. ([`31b3592`](https://github.com/LedgerInvesti
 
 Minor: ci version release ([`3b2d8c6`](https://github.com/LedgerInvesting/bayesblend/commit/3b2d8c66027296517322c00a2fc26b3be87b0b2a))
 
+* configure light/dark mode switch ([`eefca59`](https://github.com/LedgerInvesting/bayesblend/commit/eefca5998b64a93210aae634384b0adbf3519f9c))
+
 * fix workflow ([`495889e`](https://github.com/LedgerInvesting/bayesblend/commit/495889eb7452e0f030c2b49bab309e70a4f7a872))
 
+* fix tests ([`3c5b494`](https://github.com/LedgerInvesting/bayesblend/commit/3c5b4940bd69cc67c726cf49f95b9e5007749dbc))
+
+* update RTD yaml ([`a3d654a`](https://github.com/LedgerInvesting/bayesblend/commit/a3d654a8bb6933253eb31574b04bbd9732ef98cd))
+
+* update RTD yaml ([`7a52f26`](https://github.com/LedgerInvesting/bayesblend/commit/7a52f26283ad49612435f30d5cf65909ab36af16))
+
+* update RTD yaml ([`909698a`](https://github.com/LedgerInvesting/bayesblend/commit/909698a83d020c021faf01a0dfcb1ba6d5f5dd4e))
+
+* test build ([`0af6e6b`](https://github.com/LedgerInvesting/bayesblend/commit/0af6e6b44b5e31636126eff07a70d7a7f8ab14bc))
+
+* install poetry in RTD ([`f9839c0`](https://github.com/LedgerInvesting/bayesblend/commit/f9839c05b3ab670411b41a9a4f52bf6b8342622b))
+
+* test pipx in test again ([`b43b2e3`](https://github.com/LedgerInvesting/bayesblend/commit/b43b2e37808023683a49d4b74666c899e706b2a6))
+
+* install poetry with 3.11 ([`83f86b1`](https://github.com/LedgerInvesting/bayesblend/commit/83f86b12f452ad121f8c570fe73e1236a991e115))
+
 * update contributing docs ([`4850819`](https://github.com/LedgerInvesting/bayesblend/commit/4850819dc183d1afd00b3a6af469c5f3b67ad25f))
+
+* fix ruff ([`31128c7`](https://github.com/LedgerInvesting/bayesblend/commit/31128c7a3dba5f0bf073601118703e259e98b25b))
 
 * permissions in workflow ([`b30b91d`](https://github.com/LedgerInvesting/bayesblend/commit/b30b91d2086248db17b2f9921c40b7c1eb7745a6))
 
 * update semantic release workflow ([`6c1d156`](https://github.com/LedgerInvesting/bayesblend/commit/6c1d156c4c7d72954ff08907c538b21a9125d64d))
+
+* make MleStacking.fit fix the last weight ([`2231e0e`](https://github.com/LedgerInvesting/bayesblend/commit/2231e0edb2ca45967fc9914416b7ac630dcb4d2b))
+
+* update readme ([`8361e10`](https://github.com/LedgerInvesting/bayesblend/commit/8361e10103d6d2fda271b36bde4ade782a0e6023))
+
+* update readme ([`cd6b286`](https://github.com/LedgerInvesting/bayesblend/commit/cd6b28641929206080ee3df4e03d2df7dce68c93))
+
+* Merge branch &#39;main&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into make-docs ([`00f2565`](https://github.com/LedgerInvesting/bayesblend/commit/00f2565e28e72906340f240ea45606ad9bf706c0))
+
+* add getting started, contributin, explanation of terms ([`936ad5e`](https://github.com/LedgerInvesting/bayesblend/commit/936ad5ecd527958cb3e1784ca39239c5eee4a123))
+
+* move contributing to docs, remove from reop root ([`db4f16d`](https://github.com/LedgerInvesting/bayesblend/commit/db4f16d558b69bd50e4b543642f388c3068e89dd))
 
 * expand allowable semantic types ([`29e4663`](https://github.com/LedgerInvesting/bayesblend/commit/29e4663ba914fe27a4f1b4cb48c1e37d7fff5235))
 
@@ -91,11 +172,19 @@ refactor: use predict method instead of blend ([`4209a90`](https://github.com/Le
 
 * fix tests ([`76689e7`](https://github.com/LedgerInvesting/bayesblend/commit/76689e733fadad29ae1ffabb1a3517785d0bd980))
 
+* Merge branch &#39;main&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into make-docs ([`a78ab6e`](https://github.com/LedgerInvesting/bayesblend/commit/a78ab6eb61780094f4c456d2b26402c2b514b12e))
+
 * Merge pull request #16 from LedgerInvesting/contributing-suggestions
 
 `CONTRIBUTING` and `README` suggestions ([`b94e0d7`](https://github.com/LedgerInvesting/bayesblend/commit/b94e0d7a050144fd9c868578e2ea008c589e5bec))
 
+* update lock file ([`13e19ba`](https://github.com/LedgerInvesting/bayesblend/commit/13e19ba52e98c96fecedd15961ac28d180210f8d))
+
+* add doc files and config ([`dfdca1a`](https://github.com/LedgerInvesting/bayesblend/commit/dfdca1ab5c878ea7ec6b5d7e1a456411cd6f18e1))
+
 * minor grammar ([`15f1c2b`](https://github.com/LedgerInvesting/bayesblend/commit/15f1c2b00081b0e9314ddb1f8ed26d6f10f45be9))
+
+* basic mkdocs setup ([`99859d9`](https://github.com/LedgerInvesting/bayesblend/commit/99859d9516fd8244f7c2ef45cff69e163c79867f))
 
 * description ([`79bed6c`](https://github.com/LedgerInvesting/bayesblend/commit/79bed6c11cd83e2c5e81a613ad4f62685503dd96))
 
