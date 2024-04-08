@@ -2,6 +2,41 @@
 
 
 
+## v0.0.2 (2024-04-08)
+
+### Fix
+
+* fix: ruff ambiguous name ([`0ed0b2e`](https://github.com/LedgerInvesting/bayesblend/commit/0ed0b2e3ea105a738ad4f6e8a05ed85f203839f0))
+
+* fix: Fix the creation of InferenceData objects in `to_arviz`
+
+Fill the `log_likelihood` and `posterior_predictive` slots of
+InferenceData directly, don&#39;t just pass a large dict. ([`3033f3b`](https://github.com/LedgerInvesting/bayesblend/commit/3033f3b3282e946479379e17e9c5df083c380e07))
+
+### Test
+
+* test: add missing import ([`4086bdf`](https://github.com/LedgerInvesting/bayesblend/commit/4086bdf5ea5c66f31ca19d06002f27070686d7c3))
+
+* test: fix tests ([`022df8c`](https://github.com/LedgerInvesting/bayesblend/commit/022df8c022c9770d9774a826c477033e2f120a48))
+
+* test: add test comment on mean/logmeanexp ([`ead3334`](https://github.com/LedgerInvesting/bayesblend/commit/ead3334d29cc3f43e93c3961f97d0aaad19fc1cc))
+
+### Unknown
+
+* Merge pull request #23 from LedgerInvesting/feature-arviz-wrappers
+
+feature: add from/to arviz wrappers ([`3022a17`](https://github.com/LedgerInvesting/bayesblend/commit/3022a17cf62fdbaeb0acabdae17614d24552ac0a))
+
+* feature: Create BayesBlendModel objects from `lpd` values
+
+Some use cases of BayesBlend will be estimating the LPD values
+first via a variety of algorithms (e.g. PSIS-LOO, cross-validation)
+and then wanting to blend predictions. This adds a `from_lpd` method
+to allow us to handle these cases. ([`31b3592`](https://github.com/LedgerInvesting/bayesblend/commit/31b3592aec8a7ccfffcab3fb8573f2bce05c0c77))
+
+* feature: add from/to arviz wrappers ([`eb91897`](https://github.com/LedgerInvesting/bayesblend/commit/eb91897abae1e158e4c8928d062097be69688f48))
+
+
 ## v0.0.1 (2024-04-05)
 
 ### Documentation
