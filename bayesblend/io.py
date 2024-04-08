@@ -134,6 +134,12 @@ class Draws:
         samples = {log_lik_name: np.vstack(ll), post_pred_name: np.vstack(post_pred)} 
         return cls(**samples)
 
+    @classmethod
+    def from_lpd(cls, lpd: np.ndarray, post_pred: np.ndarray) -> Draws:
+        shape = post_pred.shape
+        lpd_full = np.full(shape, lpd.reshape((1, len(lpd))))
+        return cls(log_lik = lpd_full, post_pred = post_pred)
+
     def to_arviz(self, dims: Tuple[int, int, int] | None = None) -> az.InferenceData:
         log_lik = {}
         post_pred = {}

@@ -256,6 +256,20 @@ class BayesBlendModel(ABC):
             }
         )
 
+    @classmethod
+    def from_lpd(
+        cls,
+        lpd: Dict[str, np.ndarray],
+        post_pred: Dict[str, np.ndarray],
+    ):
+        return cls(
+            {
+                name: Draws.from_lpd(lpd=l, post_pred=pp)
+                for (name, l), pp
+                in zip(*[lpd.items(), post_pred.values()])
+            }
+        )
+
 
 
 class MleStacking(BayesBlendModel):

@@ -142,7 +142,7 @@ def test_model_predictions_valid():
     assert isinstance(pseudo_bma_plus.predict(return_weights=True, seed=SEED), tuple)
 
 
-def test_equal_diagnstics_equal_weights():
+def test_equal_diagnostics_equal_weights():
     model_draws = dict(model1=MODEL_DRAWS["fit1"], model2=MODEL_DRAWS["fit1"])
     stacking = MleStacking(model_draws=model_draws).fit()
     assert all([w == 0.5 for w in stacking.weights.values()])
@@ -473,6 +473,20 @@ def test_models_io_arviz():
     assert np.all(np.vstack(arviz_blend.posterior_predictive.post_pred.values) == blend.post_pred)
     with pytest.warns(UserWarning, match=r"More chains \(4000\) than draws \(10\)."):
         blend.to_arviz()
+
+
+def test_models_from_lpd():
+    lpds = {
+        name: fit.log_lik.mean(axis=0)
+        for name, fit
+        in MODEL_DRAWS.items()
+    }
+    post_preds = {
+        name: fit.post_pred
+        for name, fit
+        in MODEL_DRAWS.items()
+    }
+    assert MleStacking.from_lpd(lpds, post_preds)
 
 
 def test_seed():
