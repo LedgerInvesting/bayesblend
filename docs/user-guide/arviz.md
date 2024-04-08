@@ -1,17 +1,17 @@
-# Arviz integration
+# ArviZ integration
 
 BayesBlend can be used in conjunction with typical
-[Arviz](
+[ArviZ](
 https://github.com/arviz-devs/arviz
 )
 workflows, while remaining flexible enough
 to support bespoke modelling pipelines not dependent
-on Arviz.
+on ArviZ.
 
 ## The `BayesBlendModel.from_arviz` class method
 
 We can instantiate a new `BayesBlendModel` class
-from Arviz `InferenceData` objects via the
+from ArviZ `InferenceData` objects via the
 `from_arviz` class method, i.e.
 
 ```python title="arviz.InferenceData to BayesBlendModel"
@@ -41,8 +41,8 @@ You can also transform BayesBlend `Draws` to `arviz.InferenceData`
 objects using the `io.Draws.to_arviz` method.
 This method accepts a `dims` argument so that the `log_lik`
 and `post_pred` arrays can be correctly shaped according
-to Arviz's `(chains, draws, *variables)` shape requirement.
-Otherwise, Arviz will warn that there are more samples
+to ArviZ's `(chains, draws, *variables)` shape requirement.
+Otherwise, ArviZ will warn that there are more samples
 than draws.
 
 Continuing from the previous example:
