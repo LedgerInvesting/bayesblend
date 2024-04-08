@@ -17,7 +17,7 @@ MODEL = CmdStanModel(stan_file=STAN_FILE)
 
 CFG = {"chains": 4, "parallel_chains": 4}
 
-SEED = 1234
+SEED = 12344
 
 with open(DATA_FILE, "r") as f:
     BERN_DATA = json.load(f)

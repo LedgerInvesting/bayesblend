@@ -216,6 +216,8 @@ class BayesBlendModel(ABC):
         for model, draws in model_draws.items():
             blend_id = blend_idx[model]
             for par, samples in draws:
+                if samples is None:
+                    continue
                 blended_list = [
                     list(samples[draws_idx == blend_id, idx])
                     for idx, draws_idx in enumerate(draws_idx_list)
@@ -234,12 +236,14 @@ class BayesBlendModel(ABC):
         model_fits: Dict[str, CmdStanMCMC],
         log_lik_name: str = "log_lik",
         post_pred_name: str = "post_pred",
+        **kwargs,
     ) -> BayesBlendModel:
         return cls(
             {
                 model: Draws.from_cmdstanpy(fit, log_lik_name, post_pred_name)
                 for model, fit in model_fits.items()
-            }
+            },
+            **kwargs,
         )
 
     @classmethod
@@ -280,6 +284,10 @@ class MleStacking(BayesBlendModel):
     across log predictive densities. Approximate log predictive densities
     can be obtained via PSIS-LOO or PSIS-LFO.
 
+    The fitting routine largely follows the implementation in Arviz. 
+    See:
+    * https://github.com/arviz-devs/arviz/blob/main/arviz/stats/stats.py#L223-L250
+
     Attributes:
         model_draws: As in the base `BayesBlendModel` class.
     """
@@ -299,31 +307,32 @@ class MleStacking(BayesBlendModel):
         return -sum(log_scores)
 
     def _grad(self, w, *args):
-        """Gradient/jacobian of the objective function"""
+        """Jacobian of the objective function.
+
+        The gradient of log(Y @ w) wrt w is 1/(Y @ w) Y, using
+        the chain rule. 
+        """
         Y = args[0]
         N, K = Y.shape
         grad = np.diag(np.ones(N) / (Y @ w)) @ Y
         return -grad.sum(axis=0)
 
-    def _eq_constraint(self, w):
-        # constraint for the optimization:
-        #    sum(w) == 1,
-        # so sum(w) - 1 == 0
+    def _constraint(self, w):
+        # sum(w) - 1 = 0
         return sum(w) - 1
 
     def fit(self) -> MleStacking:
-        # get the raw log predictive densities, i.e. p(y_i | y_-i) from the
-        # pointwise_diagnostics object
         lpd_points = np.array([draws.lpd for draws in self.model_draws.values()]).T
         _, K = lpd_points.shape
+        exp_lpd = np.exp(lpd_points)
 
         res = minimize(
             fun=self._obj_fun,
             jac=self._grad,
-            args=(np.exp(lpd_points)),
+            args=(exp_lpd),
             x0=np.repeat(1 / K, K),
             method="SLSQP",
-            constraints=dict(type="eq", fun=self._eq_constraint),
+            constraints=dict(type="eq", fun=self._constraint),
             bounds=[(0, 1) for _ in range(K)],
             options=self.optimizer_options,
         )
@@ -1115,4 +1124,4 @@ def _normalize_weights(weights: np.ndarray):
     """Normalize weights due to rounding error, witch strict value check"""
     if not np.isclose(sum(weights), 1, atol=1e-7):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
-    return weights / sum(weights)
+    return np.array([max(0, w) for w in weights / sum(weights)])

@@ -122,5 +122,3 @@ jobs:
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
-      
-    

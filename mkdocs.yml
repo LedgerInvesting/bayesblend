@@ -1,0 +1,44 @@
+site_name: BayesBlend
+site_url: https://ledger.bayesblend.com/
+repo_url: https://github.com/LedgerInvesting/bayesblend/
+
+theme: 
+  name: material
+  palette: 
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch
+        name: Light mode
+  features:
+    - content.code.copy
+
+
+nav:
+  - Home: index.md
+  - Installation: user-guide/installation.md
+  - Contributing: developer-guide/contributing.md
+  - User Guide: user-guide/index.md
+  - Developer Guide: developer-guide/index.md
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - stylesheets/extra.css
