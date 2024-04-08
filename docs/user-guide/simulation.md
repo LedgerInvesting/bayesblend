@@ -15,7 +15,7 @@ to be specified exactly.
 To demonstrate this equivalence between common model
 averaging methods and mixture models,
 we simulate univariate data of size $N$ from a regression
-model with 2 independent predictor variables and thier interaction:
+model with 2 independent predictor variables and their interaction:
 
 \begin{align}
     \tag{True model}
