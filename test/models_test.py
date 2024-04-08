@@ -7,8 +7,7 @@ import numpy as np
 import pytest
 from cmdstanpy import CmdStanModel
 
-from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
-from bayesblend.io import Draws
+from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma, Draws
 
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
@@ -476,6 +475,9 @@ def test_models_io_arviz():
 
 
 def test_models_from_lpd():
+    # Generate some fake LPDs.
+    # note, we just take the mean here,
+    # not the logmeanexp
     lpds = {
         name: fit.log_lik.mean(axis=0)
         for name, fit
