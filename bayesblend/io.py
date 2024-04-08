@@ -135,12 +135,13 @@ class Draws:
         return cls(**samples)
 
     def to_arviz(self, dims: Tuple[int, int, int] | None = None) -> az.InferenceData:
-        arviz_dict = {}
+        log_lik = {}
+        post_pred = {}
         if self.log_lik is not None:
-            arviz_dict["log_likelihood"] = {"log_lik": self.log_lik.reshape(self.log_lik.shape if dims is None else dims)}
+            log_lik = {"log_lik": self.log_lik.reshape(self.log_lik.shape if dims is None else dims)}
         if self.post_pred is not None:
-            arviz_dict["posterior_predictive"] = {"post_pred": self.post_pred.reshape(self.post_pred.shape if dims is None else dims)}
-        return az.from_dict(arviz_dict)
+            post_pred = {"post_pred": self.post_pred.reshape(self.post_pred.shape if dims is None else dims)}
+        return az.from_dict(log_likelihood=log_lik, posterior_predictive=post_pred)
 
 
 
