@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Generator, Tuple
 
+import arviz as az
 import numpy as np
 from cmdstanpy import CmdStanMCMC
 
@@ -42,7 +43,6 @@ class Draws:
         for attr in [{"log_lik": self.log_lik_2d}, {"post_pred": self.post_pred_2d}]:
             for par, samples in attr.items():
                 yield par, samples
-
     @property
     def n_samples(self) -> int:
         if self.log_lik is not None:
@@ -107,6 +107,41 @@ class Draws:
             var: fit.stan_variable(var) for var in [log_lik_name, post_pred_name]
         }
         return cls(**samples)
+
+    @classmethod
+    def from_arviz(
+        cls,
+        fit: az.InferenceData,
+        log_lik_name: str = "log_lik",
+        post_pred_name: str = "post_pred",
+    ) -> Draws:
+        posterior = fit.to_dict()
+
+        try:
+            ll = posterior["log_likelihood"][log_lik_name]
+        except KeyError:
+            ll = posterior["posterior"][log_lik_name]
+        except Exception:
+            raise
+
+        try:
+            post_pred = posterior["posterior_predictive"][post_pred_name]
+        except KeyError:
+            post_pred = posterior["posterior"][post_pred_name]
+        except Exception:
+            raise
+
+        samples = {log_lik_name: np.vstack(ll), post_pred_name: np.vstack(post_pred)} 
+        return cls(**samples)
+
+    def to_arviz(self, dims: Tuple[int, int, int] | None = None) -> az.InferenceData:
+        arviz_dict = {}
+        if self.log_lik is not None:
+            arviz_dict["log_likelihood"] = {"log_lik": self.log_lik.reshape(self.log_lik.shape if dims is None else dims)}
+        if self.post_pred is not None:
+            arviz_dict["posterior_predictive"] = {"post_pred": self.post_pred.reshape(self.post_pred.shape if dims is None else dims)}
+        return az.from_dict(arviz_dict)
+
 
 
 def compute_lpd(log_lik: np.ndarray) -> np.ndarray:

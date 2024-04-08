@@ -1,6 +1,7 @@
 import copy
 import json
 from functools import lru_cache
+import arviz as az
 
 import numpy as np
 import pytest
@@ -456,6 +457,22 @@ def test_blend_3d_variables():
 def test_models_from_cmdstanpy():
     model_fits = dict(fit1=FIT, fit2=FIT)
     assert MleStacking.from_cmdstanpy(model_fits)
+
+
+def test_models_io_arviz():
+    idata = {
+        "fit1": az.from_cmdstanpy(FIT),
+        "fit2": az.from_cmdstanpy(FIT),
+    }
+    stack = MleStacking.from_arviz(idata)
+    stack.fit()
+    blend = stack.predict()
+    arviz_blend = blend.to_arviz(dims=(4, 1000, 10))
+    assert isinstance(arviz_blend, az.InferenceData)
+    assert np.all(np.vstack(arviz_blend.log_likelihood.log_lik.values) == blend.log_lik)
+    assert np.all(np.vstack(arviz_blend.posterior_predictive.post_pred.values) == blend.post_pred)
+    with pytest.warns(UserWarning, match=r"More chains \(4000\) than draws \(10\)."):
+        blend.to_arviz()
 
 
 def test_seed():
