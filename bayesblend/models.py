@@ -264,8 +264,8 @@ class BayesBlendModel(ABC):
     ):
         return cls(
             {
-                name: Draws.from_lpd(lpd=l, post_pred=pp)
-                for (name, l), pp
+                name: Draws.from_lpd(lpd=ll, post_pred=pp)
+                for (name, ll), pp
                 in zip(*[lpd.items(), post_pred.values()])
             }
         )
