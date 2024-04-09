@@ -5,7 +5,7 @@ the `BayesBlendModel` and `Draws` classes.
 
 --------------------------------------------------
 
-BayesBlend provides an easy-to-use interface for Bayesian model averaging and Bayesian stacking. The core functionality is divided into two classes: 
+BayesBlend provides an easy-to-use interface for combining predictions from multiple Bayesian models using techniques including (pseudo) Bayesian model averaging, stacking, and hierarchical stacking. The core functionality is divided into two classes: 
 
 - `Draws`
 - `BayesBlendModel`

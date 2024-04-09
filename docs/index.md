@@ -4,7 +4,7 @@
 
 # BayesBlend
 
-BayesBlend provides an easy-to-use interface for Bayesian model averaging and Bayesian stacking.
+BayesBlend provides an easy-to-use interface to combine predictions from multiple Bayesian models using techniques including (pseudo) Bayesian model averaging, hierarchical stacking, and more!
 
 This documentation includes a [User Guide](user-guide/index.md) and a [Developer Guide](developer-guide/index.md).
 If you're new to BayesBlend, check out the [Getting Started](user-guide/getting-started.md) guide.
