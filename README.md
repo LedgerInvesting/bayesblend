@@ -1,5 +1,5 @@
 ![tests]
-(https://github.com/LedgerInvesting/bayesblend/actions/workflows/python-app.yml/badges.svg)
+(https://github.com/LedgerInvesting/bayesblend/actions/workflows/python-app.yml/badge.svg)
 
 # BayesBlend
 
