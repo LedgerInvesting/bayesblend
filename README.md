@@ -1,3 +1,6 @@
+![tests]
+(https://github.com/LedgerInvesting/bayesblend/actions/workflows/python-app.yml/badges.svg)
+
 # BayesBlend
 
 BayesBlend provides an easy-to-use interface for Bayesian model averaging and Bayesian stacking. 
