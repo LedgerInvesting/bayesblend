@@ -1,5 +1,8 @@
 ![tests](https://github.com/LedgerInvesting/bayesblend/actions/workflows/python-app.yml/badge.svg)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![mypy](https://www.mypy-lang.org/static/mypy_badge.svg)](https://mypy-lang.org/)
+[![docs](https://readthedocs.org/projects/ledger-investing-bayesblend/badge/?version=latest)](https://ledger-investing-bayesblend.readthedocs-hosted.com/en/latest/?badge=latest)
+
 
 # BayesBlend
 
