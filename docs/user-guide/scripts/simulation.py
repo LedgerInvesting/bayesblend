@@ -199,8 +199,18 @@ regression_fits = [
     for (x, x_tilde) in regression_predictors
 ]
 
-pbma = bb.PseudoBma(
-    {f"fit{i}": bb.Draws(log_lik=fit.log_lik) for i, fit in enumerate(regression_fits)},
+loo_i = [
+    az.loo(az.from_cmdstanpy(fit)).loo_i.values
+    for fit
+    in regression_fits
+]
+
+pbma = bb.PseudoBma.from_lpd(
+    lpd = {
+        f"fit{i}": loo
+        for i, loo 
+        in enumerate(loo_i)
+    },
     bootstrap=False,
     seed=SEED
 )
@@ -214,8 +224,12 @@ pbma_blend = pbma.predict(
 )
 pbma_rmse = rmse(pbma_blend.post_pred, y_tilde)
 
-pbma_plus = bb.PseudoBma(
-    {f"fit{i}": bb.Draws(log_lik=fit.log_lik) for i, fit in enumerate(regression_fits)},
+pbma_plus = bb.PseudoBma.from_lpd(
+    lpd = {
+        f"fit{i}": loo
+        for i, loo 
+        in enumerate(loo_i)
+    },
     seed=SEED
 )
 pbma_plus.fit()
@@ -228,17 +242,12 @@ pbma_plus_blend = pbma_plus.predict(
 )
 pbma_plus_rmse = rmse(pbma_plus_blend.post_pred, y_tilde)
 
-loo_i = [
-    az.loo(az.from_cmdstanpy(fit)).loo_i.values
-    for fit
-    in regression_fits
-]
 stack = bb.MleStacking.from_lpd(
-        lpd = {
-            f"fit{i}": loo
-            for i, loo 
-            in enumerate(loo_i)
-        },
+    lpd = {
+        f"fit{i}": loo
+        for i, loo 
+        in enumerate(loo_i)
+    },
 )
 stack.fit()
 stack_blend = stack.predict(
