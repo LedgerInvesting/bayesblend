@@ -252,26 +252,33 @@ class BayesBlendModel(ABC):
         model_fits: Dict[str, az.InferenceData],
         log_lik_name: str = "log_lik",
         post_pred_name: str = "post_pred",
+        **kwargs,
     ) -> BayesBlendModel:
         return cls(
             {
                 model: Draws.from_arviz(fit, log_lik_name, post_pred_name)
                 for model, fit in model_fits.items()
-            }
+            },
+            **kwargs,
         )
 
     @classmethod
     def from_lpd(
         cls,
         lpd: Dict[str, np.ndarray],
-        post_pred: Dict[str, np.ndarray],
+        post_pred: Optional[Dict[str, np.ndarray]] = None,
+        **kwargs,
     ):
+        if post_pred is None:
+            post_pred = {k: None for k in lpd}
+
         return cls(
             {
                 name: Draws.from_lpd(lpd=ll, post_pred=pp)
                 for (name, ll), pp
                 in zip(*[lpd.items(), post_pred.values()])
-            }
+            },
+            **kwargs,
         )
 
 

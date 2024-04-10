@@ -1,19 +1,38 @@
 # Comparing mixture modelling to pseudo-BMA+ and stacking
 
-Model averaging methods are closely related to mixture
-modelling, but instead estimate the mixture weights in
-two steps, which can often be quicker and less prone to
-estimation errors ([Yao *et al.* (2018)](
-http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf)).
-They can also perform better than mixture modelling
-in so-called $\mathcal{M}$-open settings,
-where the true model is not in the set of
-candidate models $\mathcal{M} = \{M_{1}, ..., M_{K}\}$,
-and is fundamentally unknown or at least unable
-to be specified exactly.
+To build intuition about model averaging methods,
+this tutorial compares [mixture modeling](
+https://en.wikipedia.org/wiki/Mixture_model
+) to two common averaging approaches: pseudo-BMA+
+and stacking.
 
-To demonstrate this equivalence between common model
-averaging methods and mixture models,
+Most model averaging methods are closely related to mixture
+modelling, but differ in that they're often applied
+in two separate steps: one to estimate the quantity
+of interest from each candidate model, and another to
+find estimate the model weights and blend predictions.
+In practice, model averaging methods, like stacking,
+are usually quicker and less prone to
+estimation errors ([Yao *et al.* (2018)](
+http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf)),
+and frequently perform better than mixture modelling
+because the quantities used to compare models
+focus on out-of-sample predictive accuracy, not just
+in-sample performance.
+This is particularly the case in $\mathcal{M}$-open settings,
+where the true model is not in the set of
+candidate models $\mathcal{M} = \{M_{1}, ..., M_{K}\}$
+because it is unknown.
+
+Note that mixture modelling is very similar to the technique of
+[Bayesian model averaging](
+https://arxiv.org/abs/1711.10016
+), as the posterior distribution of the mixture weights
+used for averaging correspond to the
+classical marginal likelihood Bayesian model
+averaging weights.
+
+For this example,
 we simulate univariate data of size $N$ from a regression
 model with 2 independent predictor variables and their interaction:
 
@@ -29,6 +48,7 @@ and $\sigma = 1$.
 
 We use three candidate models that are similar to the true model
 but do not specify the correct linear predictor term, $\mu_{i}$. 
+Each model uses weakly informative priors.
 
 Model 1 includes a single predictor $\mathbf{x}_{1} = (x_{11}, x_{21}, ..., x_{i1}, ..., x_{N1})$:
 
@@ -37,8 +57,8 @@ Model 1 includes a single predictor $\mathbf{x}_{1} = (x_{11}, x_{21}, ..., x_{i
     y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
     \mu_{i} &= \alpha + \beta x_{i1}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    \beta &\sim \mathrm{Normal}(0, 1)\\
-    \sigma &\sim \mathrm{Normal}^{+}(0, 1)\\
+    \beta &\sim \text{Student-t}_{3}(0, 1)\\
+    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
 \end{align}
 
 Model 2 includes a single predictor $\mathbf{x}_{2}$:
@@ -48,8 +68,8 @@ Model 2 includes a single predictor $\mathbf{x}_{2}$:
     y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
     \mu_{i} &= \alpha + \beta x_{i2}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    \beta &\sim \mathrm{Normal}(0, 1)\\
-    \sigma &\sim \mathrm{Normal}^{+}(0, 1)\\
+    \beta &\sim \text{Student-t}_{3}(0, 1)\\
+    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
 \end{align}
 
 Model 3 includes both predictors but not their interaction:
@@ -59,9 +79,8 @@ Model 3 includes both predictors but not their interaction:
     y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
     \mu_{i} &= \alpha + \beta_{1} x_{i1} + \beta_{2} x_{i2}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    \beta_{1} &\sim \mathrm{Normal}(0, 1)\\
-    \beta_{2} &\sim \mathrm{Normal}(0, 1)\\
-    \sigma &\sim \mathrm{Normal}^{+}(0, 1)\\
+    (\beta_1, \beta_2)' &\sim \text{Student-t}_{3}(0, 1)\\
+    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
 \end{align}
 
 ## Simulating the data 
@@ -122,9 +141,9 @@ transformed parameters {
 }
 
 model {
-    alpha ~ normal(0, 10);
-    beta ~ normal(0, 10);
-    sigma ~ normal(0, 10);
+    alpha ~ normal(0, 1);
+    beta ~ student_t(3, 0, 1);
+    sigma ~ student_t(3, 0, 1);
 
     y ~ normal(mu, sigma);
 }
@@ -166,50 +185,50 @@ directly, producing a coherent posterior predictive distribution
 in the `generated quantities` section:
 
 ```stan title="mixture.stan"
-    data {
-        int<lower=0> N;
-        int<lower=2> K;
-        int<lower=1> P;
-        matrix[N, P] X;
-        vector[N] y;
+data {
+    int<lower=0> N;
+    int<lower=2> K;
+    int<lower=1> P;
+    matrix[N, P] X;
+    vector[N] y;
+}
+
+parameters {
+    real alpha;
+    vector[P + 2] beta;
+    real<lower=0> sigma;
+    simplex[K] w;
+}
+model {
+    alpha ~ normal(0, 1);
+    beta ~ student_t(3, 0, 1);
+    sigma ~ student_t(3, 0, 1);
+
+    for(i in 1:N) {
+        row_vector[K] lps = [
+            normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
+            normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
+            normal_lpdf(y[i] | alpha + X[i] * beta[3:], sigma)
+        ];
+        target += log_sum_exp(log(w) + lps');
     }
+}
 
-    parameters {
-        real alpha;
-        vector[P + 2] beta;
-        real<lower=0> sigma;
-        simplex[K] w;
+generated quantities {
+    vector[N] post_pred;
+
+    for(i in 1:N) {
+        row_vector[K] preds = [
+            normal_rng(alpha + beta[1] * X[i,1], sigma),
+            normal_rng(alpha + beta[2] * X[i,2], sigma),
+            normal_rng(alpha + X[i] * beta[3:], sigma)
+        ];
+        int mix_idx = categorical_rng(w);
+        post_pred[i] = preds[mix_idx];
     }
-
-    model {
-        alpha ~ normal(0, 1);
-        beta ~ normal(0, 1);
-        sigma ~ normal(0, 1);
-
-        for(i in 1:N) {
-            row_vector[K] lps = [
-                normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
-                normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
-                normal_lpdf(y[i] | alpha + X[i] * beta[3:], sigma)
-            ];
-            target += log_sum_exp(log(w) + lps');
-        }
-    }
-
-    generated quantities {
-        vector[N] post_pred;
-
-        for(i in 1:N) {
-            row_vector[K] preds = [
-                normal_rng(alpha + beta[1] * X[i,1], sigma),
-                normal_rng(alpha + beta[2] * X[i,2], sigma),
-                normal_rng(alpha + X[i] * beta[3:], sigma)
-            ];
-            int mix_idx = categorical_rng(w);
-            post_pred[i] = preds[mix_idx];
-        }
-    }
+}
 ```
+
 
 ```python title="Fit the mixture model"
 mixture = csp.CmdStanModel(stan_file="mixture.stan")
@@ -220,14 +239,39 @@ fit_mixture = mixture.sample(
 )
 ```
 
-The figure below shows the estimated posterior weights,
-alongside the posterior predictive distribution.
-Model 1 is given most weight (mean = 63.7%), followed by
-model 3 (mean = 35.0%), and model 2 is given hardly any weight
+The figure below shows the mean and 95% quantiles
+of the estimates for $\beta$, named $\hat{\beta}$, 
+in the left panel, 
+2) the posterior distribution of the weights for each model ($\hat{w}$)
+in the middle panel, and
+3) the real data distribution (gray) against the
+posterior predictive distribution in the right panel.
+The posterior predictive distribution is the 
+distribution of the mean posterior predictive estimates for each
+data point across all samples in the data.
+Model 1 is given most weight (mean = 61.5%), followed by
+model 3 (mean = 37.1%), and model 2 is given hardly any weight
 at all (mean = 1.4%).
 
 ![mixture_weights](scripts/figures/mixture-weights.png)
-*Mixture model weights and predictions*
+
+It might seem strange at first that model 1 is given most weight
+when we know that model 3 is the closest to the data generating 
+process. That is, both $\beta_{1}$ and $\beta_{2}$ contribute to
+the generation of $y$ in our simulation above. However, looking
+at the estimates of $\mathbf{B}$, it's obvious that
+while the mixture model accurately estimates $\beta_{1}$ in the first
+mixture expression ($\hat{\beta}_1)$, 
+the model is very unsure of the estimate of $\beta_{2}$ 
+in the second mixture ($\hat{\beta}_2$), 
+and then underestimates $\beta_1$ and overestimates $\beta_2$
+in the third mixture ($\hat{\beta}_{3}$ and $\hat{\beta}_{4}$).
+This means that the third mixture expression's performance, while technically
+the closest to the true model, is harmed by over-inflating of the less
+important predictor $\mathbf{x}_2$. With a much larger sample size,
+the balance is tipped in favour of model 3, however.
+In the limit of infinite data, model 3 will receive 100% weight
+as it will fit the data better than the other candidate models.
 
 ## Estimating weights via pseudo-BMA+ and stacking
 
