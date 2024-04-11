@@ -2,6 +2,61 @@
 
 
 
+## v0.0.4 (2024-04-11)
+
+### Ci
+
+* ci: test badges on rtd index ([`71a1ff1`](https://github.com/LedgerInvesting/bayesblend/commit/71a1ff18a3d04f744db96085c72ba24dbb2345cf))
+
+* ci: mypy, docs badges ([`d41e492`](https://github.com/LedgerInvesting/bayesblend/commit/d41e49249b42163875d9c468e15f7dc0c368e9a4))
+
+* ci: ruff badge ([`e0c5a31`](https://github.com/LedgerInvesting/bayesblend/commit/e0c5a311e3626724adea243c30a05cfa77f5f789))
+
+* ci: retry workflow badge ([`c96d0df`](https://github.com/LedgerInvesting/bayesblend/commit/c96d0dfc7443cc19da7dd9501445d839ca5c871b))
+
+* ci: fix workflow badge ([`cb2d9e8`](https://github.com/LedgerInvesting/bayesblend/commit/cb2d9e860673f1fe5eb38faf1638b976f04f9adb))
+
+* ci: add workflow badge to readme ([`db4634b`](https://github.com/LedgerInvesting/bayesblend/commit/db4634b91068f7bb296512dcd23b521095ba1d7c))
+
+### Documentation
+
+* docs: clarify model averaging throughout
+
+We used the term &#34;Bayesian model averaging&#34; before, but realize that this could be a bit misleading in that we do stacking and pseudo-BMA. Removing the BMA terminology from docs to not confuse users. ([`2640217`](https://github.com/LedgerInvesting/bayesblend/commit/2640217cc07a1c587477526e31e3c9b083d7e403))
+
+### Fix
+
+* fix(io): name of arrays sent to Draws
+
+io.Draws.from_* methods were previously using the user-specified names of log_lik and post_pred arrays instead of the stadardized names when initializing Draws objects. This produced errors when, e.g., the log_lik array was named something different (e.g., loglik) from the standard name. ([`a5ae9c9`](https://github.com/LedgerInvesting/bayesblend/commit/a5ae9c9a2c2c0654383d8eabc00c0ebb0fdfd421))
+
+### Refactor
+
+* refactor(io): simplify access to stan variables ([`5b3dd11`](https://github.com/LedgerInvesting/bayesblend/commit/5b3dd1184a757807df4e9f3c94c28909879e3449))
+
+### Test
+
+* test(io): add test for different posterior array names ([`2293e8c`](https://github.com/LedgerInvesting/bayesblend/commit/2293e8cb8e1ed92b1e540818f968ebc17b2cf125))
+
+### Unknown
+
+* Merge pull request #30 from LedgerInvesting/fix-io-array-names
+
+fix(io): name of arrays sent to Draws ([`f7317db`](https://github.com/LedgerInvesting/bayesblend/commit/f7317db86cce28ce5463ae72409c2473e117a308))
+
+* Merge pull request #27 from LedgerInvesting/docs-clarify-averaging
+
+docs: clarify model averaging throughout ([`d058bf8`](https://github.com/LedgerInvesting/bayesblend/commit/d058bf8a6552cc82a0ea44330cb6f2b92d82b0a7))
+
+* Merge pull request #25 from LedgerInvesting/ci-badges
+
+ci: add badges ([`bb5795a`](https://github.com/LedgerInvesting/bayesblend/commit/bb5795a96bd82dec1ebc40982d5fa5c74877c83e))
+
+* Merge pull request #24 from LedgerInvesting/docs-fix-readme-links
+
+fix: fix documentation README links ([`c395191`](https://github.com/LedgerInvesting/bayesblend/commit/c3951912520e124b551f7172ffd6018924338a5b))
+
+
 ## v0.0.3 (2024-04-08)
 
 ### Documentation
@@ -9,6 +64,10 @@
 * docs: update readme links to latest ([`9b035b8`](https://github.com/LedgerInvesting/bayesblend/commit/9b035b8271598995599370f61d6b3984c383c3b6))
 
 * docs: re-run mixture model with separate coefficients ([`da345c4`](https://github.com/LedgerInvesting/bayesblend/commit/da345c43cd313c175339cbedea5f4a5f76a59196))
+
+### Fix
+
+* fix: fix-readme-links ([`8808b65`](https://github.com/LedgerInvesting/bayesblend/commit/8808b657e4dea38ca6c53c63a1e196d0b939f053))
 
 ### Unknown
 
