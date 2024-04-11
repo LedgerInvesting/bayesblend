@@ -105,10 +105,8 @@ class Draws:
         post_pred_name: str = "post_pred",
     ) -> Draws:
         samples = {
-            var: fit.stan_variable(name)
-            for var, name in zip(
-                ["log_lik", "post_pred"], [log_lik_name, post_pred_name]
-            )
+            "log_lik": fit.stan_variable(log_lik_name),
+            "post_pred": fit.stan_variable(post_pred_name),
         }
         return cls(**samples)
 
