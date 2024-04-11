@@ -43,6 +43,7 @@ class Draws:
         for attr in [{"log_lik": self.log_lik_2d}, {"post_pred": self.post_pred_2d}]:
             for par, samples in attr.items():
                 yield par, samples
+
     @property
     def n_samples(self) -> int:
         if self.log_lik is not None:
@@ -104,7 +105,10 @@ class Draws:
         post_pred_name: str = "post_pred",
     ) -> Draws:
         samples = {
-            var: fit.stan_variable(var) for var in [log_lik_name, post_pred_name]
+            var: fit.stan_variable(name)
+            for var, name in zip(
+                ["log_lik", "post_pred"], [log_lik_name, post_pred_name]
+            )
         }
         return cls(**samples)
 
@@ -131,24 +135,31 @@ class Draws:
         except Exception:
             raise
 
-        samples = {log_lik_name: np.vstack(ll), post_pred_name: np.vstack(post_pred)} 
+        samples = {"log_lik": np.vstack(ll), "post_pred": np.vstack(post_pred)}
         return cls(**samples)
 
     @classmethod
     def from_lpd(cls, lpd: np.ndarray, post_pred: np.ndarray) -> Draws:
         shape = post_pred.shape
         lpd_full = np.full(shape, lpd.reshape((1, len(lpd))))
-        return cls(log_lik = lpd_full, post_pred = post_pred)
+        return cls(log_lik=lpd_full, post_pred=post_pred)
 
     def to_arviz(self, dims: Tuple[int, int, int] | None = None) -> az.InferenceData:
         log_lik = {}
         post_pred = {}
         if self.log_lik is not None:
-            log_lik = {"log_lik": self.log_lik.reshape(self.log_lik.shape if dims is None else dims)}
+            log_lik = {
+                "log_lik": self.log_lik.reshape(
+                    self.log_lik.shape if dims is None else dims
+                )
+            }
         if self.post_pred is not None:
-            post_pred = {"post_pred": self.post_pred.reshape(self.post_pred.shape if dims is None else dims)}
+            post_pred = {
+                "post_pred": self.post_pred.reshape(
+                    self.post_pred.shape if dims is None else dims
+                )
+            }
         return az.from_dict(log_likelihood=log_lik, posterior_predictive=post_pred)
-
 
 
 def compute_lpd(log_lik: np.ndarray) -> np.ndarray:
