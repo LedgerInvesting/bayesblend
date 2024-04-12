@@ -1,10 +1,12 @@
-# Comparing mixture modelling to pseudo-BMA+ and stacking
+# Model averaging via mixture modeling, pseudo-BMA, pseudo-BMA+ and stacking
 
 To build intuition about model averaging methods,
 this tutorial compares [mixture modeling](
 https://en.wikipedia.org/wiki/Mixture_model
-) to two common averaging approaches: pseudo-BMA+
-and stacking.
+) to different model averaging approaches 
+possible in BayesBlend: pseudo-BMA, pseudo-BMA+,
+and maximum-likelihood stacking and 
+Bayesian stacking.
 
 Most model averaging methods are closely related to mixture
 modelling, but differ in that they're often applied

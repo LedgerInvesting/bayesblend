@@ -57,6 +57,7 @@ __all__ = [
     "BayesStacking",
     "HierarchicalBayesStacking",
     "PseudoBma",
+    "StaticWeights",
 ]
 
 
@@ -1115,7 +1116,6 @@ def _make_dummy_vars(
         ],
         axis=1,
     ).to_dict("list")
-
 
 def _concat_array_empty(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray:
     return np.concatenate([array for array in arrays if len(array) > 0], axis=axis)
