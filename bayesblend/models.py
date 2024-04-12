@@ -306,8 +306,6 @@ class SimpleBlend(BayesBlendModel):
             raise ValueError(f"Weights should be shaped as (weights, 1) or (weights, ), not {bad_shapes}.")
         if len(weights) != len(model_draws):
             raise ValueError("Weights and model_draws should be the same length.")
-        if np.sum(list(weights.values())) != 1.0:
-            raise ValueError("Weights do not sum to one.")
         wshape = weights[next(iter(weights))].shape
         self._weights = {k: w.reshape((max(wshape), 1)) for k, w in weights.items()}
 
