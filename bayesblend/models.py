@@ -53,6 +53,7 @@ CMDSTAN_DEFAULTS = {
 }
 
 __all__ = [
+    "SimpleBlend",
     "MleStacking",
     "BayesStacking",
     "HierarchicalBayesStacking",
@@ -273,6 +274,52 @@ class BayesBlendModel(ABC):
                 in zip(*[lpd.items(), post_pred.values()])
             }
         )
+
+
+class SimpleBlend(BayesBlendModel):
+    """A model for blending via user-supplied weights.
+
+    This is a convenience class to blend models
+    by a set of weights that are supplied directly
+    by the user. Therefore, the `fit` method
+    simply returns `self` immediately. The `predict`
+    method takes no arguments, as the intent is that
+    users will blend the draws passed in at model
+    construction.
+
+    Attributes:
+        model_draws: As in the base `BayesBlendModel` class.
+        weights: A dictionary of model weights.
+    """
+
+    def __init__(
+        self, 
+        model_draws: Dict[str, Draws],
+        weights: Weights,
+    ) -> None:
+        super().__init__(model_draws)
+        first_weight = weights[next(iter(weights))]
+        if isinstance(first_weight, (list, float)):
+            weights = {k: np.array(w if isinstance(w, list) else [w]) for k, w in weights.items()}
+        if any(w.ndim > 2 for w in weights.values()):
+            bad_shapes = [w.shape for w in weights.values()]
+            raise ValueError(f"Weights should be shaped as (weights, 1) or (weights, ), not {bad_shapes}.")
+        if len(weights) != len(model_draws):
+            raise ValueError("Weights and model_draws should be the same length.")
+        wshape = weights[next(iter(weights))].shape
+        self._weights = {k: w.reshape((max(wshape), 1)) for k, w in weights.items()}
+
+    def fit(self) -> SimpleBlend:
+        return self
+
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        blend = self._blend(model_draws=model_draws, **kwargs)
+        return blend if not return_weights else (blend, self.weights)
 
 
 
@@ -1108,6 +1155,9 @@ def _make_dummy_vars(
         ],
         axis=1,
     ).to_dict("list")
+
+
+
 
 
 def _concat_array_empty(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray:
