@@ -1,7 +1,7 @@
-# mypy: ignore-errors 
+# mypy: ignore-errors
 
 import argparse
-from typing import Optional
+from typing import Optional, Tuple
 import arviz as az
 import numpy as np
 import cmdstanpy as csp
@@ -19,17 +19,17 @@ N = 50
 N_tilde = 50
 rng = np.random.default_rng(SEED)
 
-def simulate_data(seed: Optional[int] = None):
+Data = Tuple[np.ndarray, np.ndarray]
+
+def simulate_data(seed: Optional[int] = None) -> Tuple[Data, Data]:
     alpha = rng.normal()
     sigma = 1
     X = rng.normal(size=(N, P))
-    X = np.hstack([X, np.prod(X, axis=1).reshape((N, 1))])
     X_tilde = rng.normal(size=(N_tilde, P))
-    X_tilde = np.hstack([X_tilde, np.prod(X_tilde, axis=1).reshape((N_tilde, 1))])
-
     y = rng.normal(alpha, sigma, size=N)
     y_tilde = rng.normal(alpha, sigma, size=N_tilde)
-    return ( (y, X), (y_tilde, X_tilde) )
+
+    return ((y, X), (y_tilde, X_tilde))
 
 
 mixture_string = """
@@ -65,7 +65,6 @@ mixture_string = """
     model {
         alpha ~ std_normal();
         beta ~ std_normal();
-        //sigma ~ std_normal();
 
         for(i in 1:N)
             target += log_sum_exp(lps[i]);
@@ -87,16 +86,27 @@ mixture_string = """
 with open("docs/user-guide/scripts/mixture.stan", "w") as stan_file:
     stan_file.write(mixture_string)
 
+
 def fit_mixture(train, test):
     mixture = csp.CmdStanModel(stan_file="docs/user-guide/scripts/mixture.stan")
     y, X = train
     y_tilde, X_tilde = test
     fit = mixture.sample(
-        data={"N": len(y), "N_tilde": len(y_tilde), "P": P, "K": K, "X": X[:,:P], "X_tilde": X_tilde[:,:P], "y": y, "y_tilde": y_tilde},
+        data={
+            "N": len(y),
+            "N_tilde": len(y_tilde),
+            "P": P,
+            "K": K,
+            "X": X[:, :P],
+            "X_tilde": X_tilde[:, :P],
+            "y": y,
+            "y_tilde": y_tilde,
+        },
         inits=0,
-        seed=SEED
+        seed=SEED,
     )
     return fit
+
 
 regression_string = """
     data {
@@ -143,52 +153,43 @@ with open("docs/user-guide/scripts/regression.stan", "w") as stan_file:
 
 regression = csp.CmdStanModel(stan_file="docs/user-guide/scripts/regression.stan")
 
+
 def fit_regressions(train, test):
     y, X = train
     y_tilde, X_tilde = test
-    predictors = [
-        (X[:,[*p]], X_tilde[:,[*p]])
-        for p in ([0], [1], [0, 1])
-    ]
+    predictors = [(X[:, [*p]], X_tilde[:, [*p]]) for p in ([0], [1], [0, 1])]
     fits = [
         regression.sample(
-            data={"N": N, "N_tilde": N_tilde, "P": x.shape[1], "X": x, "X_tilde": x_tilde, "y": y, "y_tilde": y_tilde}, 
-            seed=SEED
+            data={
+                "N": N,
+                "N_tilde": N_tilde,
+                "P": x.shape[1],
+                "X": x,
+                "X_tilde": x_tilde,
+                "y": y,
+                "y_tilde": y_tilde,
+            },
+            seed=SEED,
         )
-        for (x, x_tilde)
-        in predictors
+        for (x, x_tilde) in predictors
     ]
     return fits
 
-def blend(mixture, regressions):
-    loo_i = [
-        az.loo(az.from_cmdstanpy(fit)).loo_i.values
-        for fit
-        in regressions
-    ]
 
-    loo_fits = {
-        f"fit{i}": loo
-        for i, loo
-        in enumerate(loo_i)
-    }
+def blend(mixture, regressions):
+    loo_i = [az.loo(az.from_cmdstanpy(fit)).loo_i.values for fit in regressions]
+
+    loo_fits = {f"fit{i}": loo for i, loo in enumerate(loo_i)}
 
     pred_draws = {
         f"fit{i}": bb.Draws(
             log_lik=fit.log_lik_tilde,
         )
-        for i, fit
-        in enumerate(regressions)
+        for i, fit in enumerate(regressions)
     }
 
     mix = bb.SimpleBlend(
-        {
-            f"fit{i}": bb.Draws(
-                log_lik=mixture.log_lik[...,i]
-            )
-            for i
-            in range(K)
-        },
+        {f"fit{i}": bb.Draws(log_lik=mixture.log_lik[..., i]) for i in range(K)},
         weights={f"fit{i}": w for i, w in enumerate(mixture.w.T)},
     )
     mix_blend = mix.predict()
@@ -214,11 +215,12 @@ def blend(mixture, regressions):
 
     return (
         (mix.weights, mix_blend),
-        (pbma.weights, pbma_blend), 
-        (pbma_plus.weights, pbma_plus_blend), 
+        (pbma.weights, pbma_blend),
+        (pbma_plus.weights, pbma_plus_blend),
         (stack.weights, stack_blend),
         (stack_bayes.weights, stack_bayes_blend),
     )
+
 
 def score(blends):
     names = (
@@ -228,25 +230,22 @@ def score(blends):
         "stack",
         "stack_bayes",
     )
-    return {
-        name: draws.lpd.sum()
-        for name, draws
-        in zip(names, blends)
-    }
+    return {name: draws.lpd.sum() for name, draws in zip(names, blends)}
+
 
 def plot(elpds, weights):
-    fig, ax = plt.subplots(2, 1, figsize=(8, 10), constrained_layout=True)
-    blends = ["mixture", "pseudo-BMA", "pseudo-BMA+", "stacking (mle)", "stacking (bayes)"]
+    fig, ax = plt.subplots(2, 1, figsize=(6, 7), constrained_layout=True)
+    blends = [
+        "mixture",
+        "pseudo-BMA",
+        "pseudo-BMA+",
+        "stacking (mle)",
+        "stacking (bayes)",
+    ]
     models = [f"model {k + 1}" for k in range(K)]
-    weight_array = np.array([
-        np.array([
-            list(w.values())
-            for w 
-            in weight
-        ])
-        for weight
-        in weights
-    ])
+    weight_array = np.array(
+        [np.array([list(w.values()) for w in weight]) for weight in weights]
+    )
 
     for elpd in elpds:
         ax[0].scatter(
@@ -278,19 +277,13 @@ def plot(elpds, weights):
         Affine2D().translate(0.1, 0.0) + base,
         Affine2D().translate(0.2, 0.0) + base,
     ]
-    for weight in weight_array:
-        for m, w in enumerate(weight):
-            ax[1].scatter(
-                models,
-                w.flatten(),
-                marker="o",
-                color="gray",
-                facecolor="none",
-                alpha=0.1,
-                transform=transforms[m],
-            )
-
-    colors = ["#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51",]
+    colors = [
+        "#264653",
+        "#2A9D8F",
+        "#E9C46A",
+        "#F4A261",
+        "#E76F51",
+    ]
     means = weight_array.mean(axis=0)
     lowers, uppers = np.quantile(weight_array, [0.025, 0.975], axis=0)
     for k, (mean, lower, upper) in enumerate(zip(means, lowers, uppers)):
@@ -309,8 +302,13 @@ def plot(elpds, weights):
     ax[0].set_ylabel("ELPD")
     ax[1].set_ylabel("weights")
     ax[1].legend(frameon=False)
-    plt.savefig("docs/user-guide/scripts/figures/stacking-compare.png", dpi=120, bbox_inches="tight")
+    plt.savefig(
+        "docs/user-guide/scripts/figures/stacking-compare.png",
+        dpi=120,
+        bbox_inches="tight",
+    )
     plt.close()
+
 
 def main(M):
     elpds = []
@@ -333,8 +331,11 @@ def main(M):
     plot(elpds, weights)
     return elpds, weights
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run the mixture modelling and stacking comparison code")
+    parser = argparse.ArgumentParser(
+        description="Run the mixture modelling and stacking comparison code"
+    )
     parser.add_argument(
         "--M",
         type=int,
@@ -344,4 +345,6 @@ if __name__ == "__main__":
     elpds, weights = main(args.M)
     n = len(elpds)
     if n:
-        print(f"Skipped {(1 - n / args.M) * 100}% of simulations due to Pareto K warnings.")
+        print(
+            f"Skipped {(1 - n / args.M) * 100}% of simulations due to Pareto K warnings."
+        )

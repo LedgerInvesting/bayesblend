@@ -5,8 +5,10 @@ this tutorial compares [mixture modeling](
 https://en.wikipedia.org/wiki/Mixture_model
 ) to different model averaging approaches 
 possible in BayesBlend: pseudo-BMA, pseudo-BMA+,
-and maximum-likelihood stacking and 
-Bayesian stacking.
+and maximum-likelihood estimated stacking and 
+Bayesian estimated stacking. BayesBlend is the only
+software we're aware of that offers stacking using 
+full Bayesian inference out-of-the-box.
 
 Most model averaging methods are closely related to mixture
 modelling, but differ in that they're often applied
@@ -40,103 +42,233 @@ http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussio
 ) for discussion of their potential differences.
 
 In this example,
-we simulate univariate data of size $N = 50$ from a
-normal distribution:
+we simulate univariate test data of 
+size $N = 50$ from the following
+model:
 
 \begin{align}
     \tag{True model}
-    \mathbf{y}_{1:N} &\sim \mathrm{Normal}(\alpha, \sigma)\\
+    \mathbf{y}_{1:N} &\sim \mathrm{Normal}(\alpha, 1)\\
+    (\mathbf{x}_1, \mathbf{x}_2)' &\sim \mathrm{Normal}(0, 1)\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
-We then use three candidate models that each correctly are similar to the true model
-but do not specify the correct linear predictor term, $\mu_{i}$. 
-Each model uses weakly informative priors.
+as well as $\tilde{N} = 50$ test data from the same model.
+
+We then use three candidate models that each 
+incorrectly presume that the variables $\mathbf{x}_1$
+and $\mathbf{x}_2$ are linearly related to the
+response, $\mathbf{y}$.
 
 Model 1 includes a single predictor $\mathbf{x}_{1} = (x_{11}, x_{21}, ..., x_{i1}, ..., x_{N1})$:
 
 \begin{align}
     \tag{Model 1}
-    y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{i}, 1)\\
     \mu_{i} &= \alpha + \beta x_{i1}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    \beta &\sim \text{Student-t}_{3}(0, 1)\\
-    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
+    \beta &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
 Model 2 includes a single predictor $\mathbf{x}_{2}$:
 
 \begin{align}
     \tag{Model 2}
-    y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{i}, 1)\\
     \mu_{i} &= \alpha + \beta x_{i2}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    \beta &\sim \text{Student-t}_{3}(0, 1)\\
-    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
+    \beta &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
 Model 3 includes both predictors but not their interaction:
 
 \begin{align}
     \tag{Model 3}
-    y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{i}, 1)\\
     \mu_{i} &= \alpha + \beta_{1} x_{i1} + \beta_{2} x_{i2}\\
     \alpha &\sim \mathrm{Normal}(0, 1)\\
-    (\beta_1, \beta_2)' &\sim \text{Student-t}_{3}(0, 1)\\
-    \sigma &\sim \text{Student-t}_{3}(0, 1)\\
+    (\beta_1, \beta_2)' &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
+
+The mixture model fits all three models simultaneously,
+estimating the simplex of model probabilities, 
+$\mathbf{w} = (w_1, w_2, w_3)$,
+with a uniform Dirichlet prior.
+In practice, the mixture weights are marginalized 
+out of the likelihood expression.
+
+\begin{align}
+    \tag{Mixture}
+    y_{i} &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
+    \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
+\end{align}
+
+We simulate $M = 100$ data sets of training and test data
+and then, for each simulation $m$, we:
+
+1. Fit the mixture model and evaluate the log predictive densities of `y_tilde`
+from each mixture component, 
+which we denote as $\log{p(\tilde{y} \mid M_{k})}$.
+2. Fit the independent regression models and evaluate both $\log{p(y \mid M_{k})}$ and 
+$\log{p(\tilde{y} \mid M_{k})}$.
+3. Estimate the Pareto-smoothed importance sampling (PSIS) leave-one-out predictive
+densities (LOO) of $\log{p(y \mid M_{k})}$.
+3. Fit the pseudo-BMA, pseudo-BMA+, stacking-mle (using maximum-likelihood optimization)
+and stacking-bayes (using full Bayesian inference) to the PSIS-LOO log densities from step
+3 to estimate the optimal weights for blending. 
+4. Blend $\log{p(\tilde{y} \mid M_{k})}$ according to the weights from the mixture model
+and those estimated in step 3. We always take the expectation of the weights,
+even in the mixture and stacking-bayes cases where we have a posterior for each weight.
+5. Calculate the [ELPD](https://stat.columbia.edu/~gelman/research/unpublished/loo_stan.pdf)
+from the blended out-of-sample log densities to compare the models.
+
+Below, we show the main parts of our workflow and the results. To reproduce the full
+workflow, the code can be found [here](
+https://github.com/LedgerInvesting/bayesblend/blob/main/docs/user-guide/scripts/simulation.py
+).
 
 ## Simulating the data 
 
+We simulate data using the function below,
+which returns the tuple of training data
+(`y, X`) and test data (`y_tilde`, `X_tilde`).
+
+
 ```python title="Data simulation"
+from typing import Optional, Tuple
+import arviz as az
 import numpy as np
 import cmdstanpy as csp
-import matplotlib.pyplot as plt
 
 import bayesblend as bb
 
-SEED = 1234
+Data = Tuple[np.ndarray, np.ndarray]
 
-rng = np.random.default_rng(SEED)
-N = 500
-P = 2
+SEED = 1234
 K = 3
-alpha = 0
-sigma = 1
-X = rng.normal(size=(N, P))
-X = np.hstack([X, np.prod(X, axis=1).reshape((N, 1))])
-beta = np.array([1.5, 0.2, 0.5])
-y = rng.normal(alpha + X @ beta, sigma)
+P = 2
+N = 50
+N_tilde = 50
+rng = np.random.default_rng(SEED)
+
+def simulate_data(seed: Optional[int] = None) -> Tuple[Data, Data]:
+    alpha = rng.normal()
+    sigma = 1
+    X = rng.normal(size=(N, P))
+    X_tilde = rng.normal(size=(N_tilde, P))
+    y = rng.normal(alpha, sigma, size=N)
+    y_tilde = rng.normal(alpha, sigma, size=N_tilde)
+
+    return ((y, X), (y_tilde, X_tilde))
 ```
 
-The array `y` now contains our simulated data from the true
-data generating process.
+## Mixture model
 
-## Fitting the models
+We can use Stan to fit the implied mixture model between candidate models.
+In the generated quantities section, we evaluate the log predictive
+densities on `y_tilde` from each model separately, $\log{p(\tilde{y} \mid M_{k})}$,
+not accounting for the weights at this time. The weights are applied using
+BayesBlend later.
 
-Next, we fit our three candidate models above, just like we'd do in a 
-real data analysis application. In the `generated quantities` section,
-we return both the log predictive densities and the posterior predictive
-distribution. Note that these are purely in-sample for this example,
-whereas in real applications we might be using the log posterior predictive
-densities on out-of-sample data, or estimates of such using techniques
-such as cross-validation.
+```stan title="mixture.stan"
+data {
+    int<lower=0> N;
+    int<lower=0> N_tilde;
+    int<lower=2> K;
+    int<lower=1> P;
+    matrix[N, P] X;
+    matrix[N_tilde, P] X_tilde;
+    vector[N] y;
+    vector[N_tilde] y_tilde;
+}
 
-The Stan code for the regression model
-is saved in a file called `regression.stan`:
+parameters {
+    vector[K] alpha;
+    vector[P + 2] beta;
+    simplex[K] w;
+}
+
+transformed parameters {
+    matrix[N, K] lps;
+
+    for(i in 1:N) {
+        lps[i] = [
+            log(w[1]) + normal_lpdf(y[i] | alpha[1] + beta[1] * X[i,1], 1),
+            log(w[2]) + normal_lpdf(y[i] | alpha[2] + beta[2] * X[i,2], 1),
+            log(w[3]) + normal_lpdf(y[i] | alpha[3] + X[i] * beta[3:], 1)
+        ];
+    }
+}
+
+model {
+    alpha ~ std_normal();
+    beta ~ std_normal();
+
+    for(i in 1:N)
+        target += log_sum_exp(lps[i]);
+}
+
+generated quantities {
+    matrix[N_tilde, K] log_lik;
+
+    for(j in 1:N_tilde) {
+        log_lik[j] = [
+            normal_lpdf(y_tilde[j] | alpha[1] + beta[1] * X_tilde[j,1], 1),
+            normal_lpdf(y_tilde[j] | alpha[2] + beta[2] * X_tilde[j,2], 1),
+            normal_lpdf(y_tilde[j] | alpha[3] + X_tilde[j] * beta[3:], 1)
+        ];
+    }
+}
+```
+
+This mixture can be fit with the function below:
+
+```python title="Fit the mixture model"
+def fit_mixture(train, test):
+    mixture = csp.CmdStanModel(stan_file="mixture.stan")
+    y, X = train
+    y_tilde, X_tilde = test
+    fit = mixture.sample(
+        data={
+            "N": len(y),
+            "N_tilde": len(y_tilde),
+            "P": P,
+            "K": K,
+            "X": X[:, :P],
+            "X_tilde": X_tilde[:, :P],
+            "y": y,
+            "y_tilde": y_tilde,
+        },
+        inits=0,
+        seed=SEED,
+    )
+    return fit
+```
+
+## Regression models
+
+The regression models are all fit in Stan using the following
+model.
+In the `generated quantities` section,
+we evaluate the log predictive densities on both the in-sample
+and out-of-sample data. The in-sample log-densities are later used
+later to estimate the weights. In the mixture model above,
+the weights are estimated as part of the model.
 
 ```stan title="regression.stan"
 data {
     int<lower=0> N;
+    int<lower=0> N_tilde;
     int<lower=1> P;
     matrix[N, P] X;
+    matrix[N_tilde, P] X_tilde;
     vector[N] y;
+    vector[N_tilde] y_tilde;
 }
 
 parameters {
     real alpha;
     vector[P] beta;
-    real<lower=0> sigma;
 }
 
 transformed parameters {
@@ -144,184 +276,128 @@ transformed parameters {
 }
 
 model {
-    alpha ~ normal(0, 1);
-    beta ~ student_t(3, 0, 1);
-    sigma ~ student_t(3, 0, 1);
-
-    y ~ normal(mu, sigma);
+    alpha ~ std_normal();
+    beta ~ std_normal();
+    y ~ normal(mu, 1);
 }
 
 generated quantities {
     vector[N] log_lik;
-    vector[N] post_pred;
-
-    for(i in 1:N) {
-        log_lik[i] = normal_lpdf(y[i] | mu[i], sigma);
-        post_pred[i] = normal_rng(mu[i], sigma);
+    vector[N_tilde] log_lik_tilde;
+    
+    for(i in 1:N) 
+        log_lik[i] = normal_lpdf(y[i] | mu[i], 1);
+    
+    for(j in 1:N_tilde) {
+        real mu_tilde = alpha + X_tilde[j] * beta;
+        log_lik_tilde[j] = normal_lpdf(y_tilde[j] | mu_tilde, 1);
     }
 }
 ```
 
-We use `cmdstanpy` to fit the regression models to the data, `y`:
+Again, the regressions can be fit with the following function:
 
-```python title="Fit the models with cmdstanpy"
-regression = csp.CmdStanModel(stan_file="regression.stan")
+```python title="Fit the regressions"
+def fit_regressions(train, test):
+    y, X = train
+    y_tilde, X_tilde = test
+    predictors = [(X[:, [*p]], X_tilde[:, [*p]]) for p in ([0], [1], [0, 1])]
+    fits = [
+        regression.sample(
+            data={
+                "N": N,
+                "N_tilde": N_tilde,
+                "P": x.shape[1],
+                "X": x,
+                "X_tilde": x_tilde,
+                "y": y,
+                "y_tilde": y_tilde,
+            },
+            seed=SEED,
+        )
+        for (x, x_tilde) in predictors
+    ]
+    return fits
+```
 
-regression_predictors = (
-    X[:,0].reshape((N, 1)), 
-    X[:,1].reshape((N, 1)), 
-    X[:,:P].reshape((N, P)),
-)
+## Estimating the weights and blending
 
-regression_fits = [
-    regression.sample(
-        data={"N": N, "P": x.shape[1], "X": x, "y": y}, seed=SEED
+For the regression models, we estimate the
+PSIS-LOO log densities, as recommended
+by
+[Yao *et al.* (2018)](
+http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
+), using `arviz`.
+
+
+```python
+regressions = fit_regressions(train, test)
+
+idata = [az.from_cmdstanpy(fit) for fit in regressions]
+loo_i = [az.loo(i).loo_i.values for i in idata]
+```
+
+Next, we apply our blending models using BayesBlend.
+For the mixture model, we use the `SimpleBlend`
+model to blend the results using the previously-estimated
+weights.
+
+```python title="Blend"
+# The out-of-sample log likelihood draws 
+# to blend for the regressions
+pred_draws = {
+    f"fit{i}": bb.Draws(
+        log_lik=fit.log_lik_tilde,
     )
-    for x in regression_predictors
-]
-```
-
-## Estimating weights via mixture modelling
-
-We can use Stan to fit the implied mixture model between candidate models
-directly, producing a coherent posterior predictive distribution
-in the `generated quantities` section:
-
-```stan title="mixture.stan"
-data {
-    int<lower=0> N;
-    int<lower=2> K;
-    int<lower=1> P;
-    matrix[N, P] X;
-    vector[N] y;
+    for i, fit in enumerate(regressions)
 }
 
-parameters {
-    real alpha;
-    vector[P + 2] beta;
-    real<lower=0> sigma;
-    simplex[K] w;
-}
-model {
-    alpha ~ normal(0, 1);
-    beta ~ student_t(3, 0, 1);
-    sigma ~ student_t(3, 0, 1);
-
-    for(i in 1:N) {
-        row_vector[K] lps = [
-            normal_lpdf(y[i] | alpha + beta[1] * X[i,1], sigma),
-            normal_lpdf(y[i] | alpha + beta[2] * X[i,2], sigma),
-            normal_lpdf(y[i] | alpha + X[i] * beta[3:], sigma)
-        ];
-        target += log_sum_exp(log(w) + lps');
-    }
-}
-
-generated quantities {
-    vector[N] post_pred;
-
-    for(i in 1:N) {
-        row_vector[K] preds = [
-            normal_rng(alpha + beta[1] * X[i,1], sigma),
-            normal_rng(alpha + beta[2] * X[i,2], sigma),
-            normal_rng(alpha + X[i] * beta[3:], sigma)
-        ];
-        int mix_idx = categorical_rng(w);
-        post_pred[i] = preds[mix_idx];
-    }
-}
-```
-
-
-```python title="Fit the mixture model"
-mixture = csp.CmdStanModel(stan_file="mixture.stan")
-
-fit_mixture = mixture.sample(
-    data={"N": N, "P": P, "K": K, "X": X[:,:2], "y": y},
-    seed=SEED
+# Mixture model blend
+mix = bb.SimpleBlend(
+    {f"fit{i}": bb.Draws(log_lik=mixture.log_lik[..., i]) for i in range(K)},
+    weights={f"fit{i}": w for i, w in enumerate(mixture.w.T)},
 )
-```
+mix_blend = mix.predict()
 
-The figure below shows the mean and 95% quantiles
-of the estimates for $\beta$, named $\hat{\beta}$, 
-in the left panel, 
-2) the posterior distribution of the weights for each model ($\hat{w}$)
-in the middle panel, and
-3) the real data distribution (gray) against the
-posterior predictive distribution in the right panel.
-The posterior predictive distribution is the 
-distribution of the mean posterior predictive estimates for each
-data point across all samples in the data.
-Model 1 is given most weight (mean = 61.5%), followed by
-model 3 (mean = 37.1%), and model 2 is given hardly any weight
-at all (mean = 1.4%).
-
-![mixture_weights](scripts/figures/mixture-weights.png)
-
-It might seem strange at first that model 1 is given most weight
-when we know that model 3 is the closest to the data generating 
-process. That is, both $\beta_{1}$ and $\beta_{2}$ contribute to
-the generation of $y$ in our simulation above. However, looking
-at the estimates of $\mathbf{B}$, it's obvious that
-while the mixture model accurately estimates $\beta_{1}$ in the first
-mixture expression ($\hat{\beta}_1)$, 
-the model is very unsure of the estimate of $\beta_{2}$ 
-in the second mixture ($\hat{\beta}_2$), 
-and then underestimates $\beta_1$ and overestimates $\beta_2$
-in the third mixture ($\hat{\beta}_{3}$ and $\hat{\beta}_{4}$).
-This means that the third mixture expression's performance, while technically
-the closest to the true model, is harmed by over-inflating of the less
-important predictor $\mathbf{x}_2$. With a much larger sample size,
-the balance is tipped in favour of model 3, however.
-In the limit of infinite data, model 3 will receive 100% weight
-as it will fit the data better than the other candidate models.
-
-## Estimating weights via pseudo-BMA+ and stacking
-
-Fitting pseudo-BMA+ and stacking models using BayesBlend
-takes only a few lines:
-
-```python title="pseudo-BMA+ and stacking"
-
-# Fit the pseudo-BMA+ model
-# Bootstrapping is the default
-bma_plus = bb.PseudoBma.from_cmdstanpy(
-        {f"fit{i}": fit for i, fit in enumerate(regression_fits)},
+# Pseudo-BMA
+pbma = bb.PseudoBma.from_lpd(
+    loo_fits,
+    bootstrap=False,
 )
-bma_plus.fit()
-bma_plus_blend = bma_plus.predict()
+pbma.fit()
+pbma_blend = pbma.predict(pred_draws)
 
-# Fit the stacking model
-stack = bb.MleStacking.from_cmdstanpy(
-        {f"fit{i}": fit for i, fit in enumerate(regression_fits)},
-)
+# Pseudo-BMA+
+pbma_plus = bb.PseudoBma.from_lpd(loo_fits, seed=SEED)
+pbma_plus.fit()
+pbma_plus_blend = pbma_plus.predict(pred_draws)
+
+# Stacking (mle)
+stack = bb.MleStacking.from_lpd(loo_fits)
 stack.fit()
-stack_blend = stack.predict()
+stack_blend = stack.predict(pred_draws)
+
+# Stacking (bayes)
+stack_bayes = bb.BayesStacking.from_lpd(loo_fits, seed=SEED)
+stack_bayes.fit()
+stack_bayes_blend = stack_bayes.predict(pred_draws)
 ```
 
-Our blended posterior draws are in the objects
-`bma_plus_blend` and `stack_blend`, respectively.
-We can now compare the weights between these approaches
-and the mixture models, as well as the blended predictive
-distributions.
+## Evaluate the predictions
 
-The plot below shows a comparison of the three models'
-estimated weights for each of the model averaging methods, 
-the predictive distributions for each method,
-and the mean and standard deviations of the RMSEs
-between the posterior predicted distributions and the
-true distribution.
+To evaluate the ELPD for each blend,
+we can simply call `Draws.lpd.sum()`
+on each model.
+
+Below is the comparison plot for the models.
+The top panel shows the mean ELPDs for each model
+(blue points) with their 95% percentile intervals
+(vertical lines). The gray open circles are all
+the ELPDs from each model.
+
+The second panel shows the mean and 95% percentile
+intervals of the estimated weights
+from each model.
 
 ![comparison](scripts/figures/stacking-compare.png)
 
-While the estimated weights for the
-pseudo-BMA+ and stacking models are similar,
-they differ from the estimated mean weights
-from the mixture model. Nonetheless,
-the blended posterior distributions are 
-all very similar, so similar that they
-can hardly be distinguished in the second panel!
-The RMSEs are, as a result, also highly similar,
-although there is a very minor preference
-for the stacking model over the pseudo-BMA+
-blend and the mixture model blend.
