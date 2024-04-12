@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from cmdstanpy import CmdStanModel
 
-from bayesblend import BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
+from bayesblend import SimpleBlend, BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
 from bayesblend.io import Draws
 
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
@@ -102,6 +102,30 @@ def fit_models():
         pseudo_bma,
         pseudo_bma_plus,
     )
+
+
+def test_simple_blend_valid_predictions():
+    w = {k: 1 / len(MODEL_DRAWS) for k in MODEL_DRAWS}
+    model = SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
+    blend = model.predict()
+
+    target_ll = np.array([draws.log_lik for draws in MODEL_DRAWS.values()])
+    assert isinstance(model, SimpleBlend)
+    assert model.weights
+    assert np.isclose(blend.log_lik.mean(), target_ll.mean())
+
+
+def test_simple_blend_catches_errors():
+    with pytest.raises(ValueError):
+        w = {k: 1.0 for k in MODEL_DRAWS}
+        SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
+    with pytest.raises(ValueError):
+        w = {k: [[1.0]] for k in MODEL_DRAWS}
+        SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
+    with pytest.raises(ValueError):
+        w = {k: 0.5 for k in range(4)}
+        SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
+
 
 
 def test_model_weights_valid():
