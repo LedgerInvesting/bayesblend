@@ -302,7 +302,7 @@ class SimpleBlend(BayesBlendModel):
         if isinstance(first_weight, (list, float)):
             weights = {k: np.array(w if isinstance(w, list) else [w]) for k, w in weights.items()}
         if any(w.ndim > 2 for w in weights.values()):
-            bad_shapes = [w.shape for w in weights.values]
+            bad_shapes = [w.shape for w in weights.values()]
             raise ValueError(f"Weights should be shaped as (weights, 1) or (weights, ), not {bad_shapes}.")
         if len(weights) != len(model_draws):
             raise ValueError("Weights and model_draws should be the same length.")
@@ -314,9 +314,14 @@ class SimpleBlend(BayesBlendModel):
     def fit(self) -> SimpleBlend:
         return self
 
-    def predict(self) -> Draws:
-        blend = self._blend()
-        return blend
+    def predict(
+        self,
+        model_draws: Dict[str, Draws] | None = None,
+        return_weights: bool = False,
+        **kwargs,
+    ) -> Draws | Tuple[Draws, Weights]:
+        blend = self._blend(model_draws=model_draws, **kwargs)
+        return blend if not return_weights else (blend, self.weights)
 
 
 
