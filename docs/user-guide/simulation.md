@@ -12,43 +12,44 @@ Most model averaging methods are closely related to mixture
 modelling, but differ in that they're often applied
 in two separate steps: one to estimate the quantity
 of interest from each candidate model, and another to
-find estimate the model weights and blend predictions.
+estimate the model weights and blend predictions.
 In practice, model averaging methods, like stacking,
 are usually quicker and less prone to
-estimation errors ([Yao *et al.* (2018)](
-http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf)),
-and frequently perform better than mixture modelling
+estimation errors ([Yao *et al.*, 2018](
+http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
+)),
+and may perform better than mixture modelling
 because the quantities used to compare models
 focus on out-of-sample predictive accuracy, not just
 in-sample performance.
 This is particularly the case in $\mathcal{M}$-open settings,
 where the true model is not in the set of
 candidate models $\mathcal{M} = \{M_{1}, ..., M_{K}\}$
-because it is unknown.
+because it is unknown, intractable or otherwise too complex
+to specify.
 
-Note that mixture modelling is very similar to the technique of
+Mixture modelling has also been found to be 
+similar to the traditional technique of
 [Bayesian model averaging](
 https://arxiv.org/abs/1711.10016
-), as the posterior distribution of the mixture weights
-used for averaging correspond to the
-classical marginal likelihood Bayesian model
-averaging weights.
+), as the expectation of the 
+posterior distribution of the mixture weights
+approximates the marginal model likelihoods.
+However, see [Yao *et al.* (2018)](
+http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
+) for discussion of their potential differences.
 
-For this example,
-we simulate univariate data of size $N$ from a regression
-model with 2 independent predictor variables and their interaction:
+In this example,
+we simulate univariate data of size $N = 50$ from a
+normal distribution:
 
 \begin{align}
     \tag{True model}
-    y_{i} &\sim \mathrm{Normal}(\mu_{i}, \sigma)\\
-    \mu_{i} &= \alpha + \beta_{1} x_{i1} + \beta_{2} x_{i2} + \beta_{3} x_{i1} x_{i2}\\
+    \mathbf{y}_{1:N} &\sim \mathrm{Normal}(\alpha, \sigma)\\
+    \alpha &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
-for $i = (1, 2, ..., N)$, fixing the parameters to
-$\alpha = 0$, $\mathbf{B} = (\beta_{1}, \beta_{2}, \beta_{3}) = (1.5, 0.2, 0.5)$
-and $\sigma = 1$.
-
-We use three candidate models that are similar to the true model
+We then use three candidate models that each correctly are similar to the true model
 but do not specify the correct linear predictor term, $\mu_{i}$. 
 Each model uses weakly informative priors.
 

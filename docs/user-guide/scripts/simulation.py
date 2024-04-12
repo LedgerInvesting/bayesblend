@@ -181,7 +181,7 @@ def blend(mixture, regressions):
         in enumerate(regressions)
     }
 
-    mix = bb.models.StaticBlend(
+    mix = bb.SimpleBlend(
         {
             f"fit{i}": bb.Draws(
                 log_lik=mixture.log_lik[...,i]
