@@ -21,6 +21,7 @@ rng = np.random.default_rng(SEED)
 
 Data = Tuple[np.ndarray, np.ndarray]
 
+
 def simulate_data(seed: Optional[int] = None) -> Tuple[Data, Data]:
     alpha = rng.normal()
     sigma = 1
