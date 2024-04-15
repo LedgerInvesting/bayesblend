@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bayesblend"
-version = "0.0.3"
+version = "0.0.4"
 description = "Easily combine predictions from multiple Bayesian models using techniques including (pseudo) Bayesian model averaging, hierarchical stacking, and more!"
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"

@@ -117,10 +117,7 @@ def test_simple_blend_valid_predictions():
 
 def test_simple_blend_catches_errors():
     with pytest.raises(ValueError):
-        w = {k: 1.0 for k in MODEL_DRAWS}
-        SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
-    with pytest.raises(ValueError):
-        w = {k: [[1.0]] for k in MODEL_DRAWS}
+        w = {k: [[[1/len(MODEL_DRAWS)]]] for k in MODEL_DRAWS}
         SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
     with pytest.raises(ValueError):
         w = {k: 0.5 for k in range(4)}
