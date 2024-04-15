@@ -430,7 +430,7 @@ As the ELPD values show, the BayesBlend model avergaing
 methods all perform better than the mixture modelling
 approach for this example, indicating that the
 use of PSIS-LOO estimates to obtain the model
-weights offers an non-trivial performance
+weights offers a non-trivial performance
 improvement. The differences between
 pseudo-BMA, pseudo-BMA+, stacking-mle
 and stacking-bayes are very small for this
@@ -443,12 +443,13 @@ http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussio
 The estimated weights across methods
 mostly weight models 1 and 2 equally,
 and model 3 the least plausible. Notice
-that the stacking-mle model has much larger
+that the stacking-mle model has much wider
 percentile intervals because it often
 places most weight on either model 1 or model 2
 rather than dividing weight equally,
 which is expected from a pure optimization
 process if models 1 and 2 provide similar predictions.
-The Bayesian stacking implementation weights (stacking-bayes)
+The Bayesian stacking implementation (stacking-bayes)
 places a prior over the weights, however, which means
-its weights are much more uniform between models.
+its weights are much more uniform between models than
+its MLE counterpart.

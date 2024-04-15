@@ -28,6 +28,9 @@ Bayesian models using posterior model probabilities:
         }
 \end{equation}
 
+where $p(y \mid M_k) = \int p(y \mid \theta_k, M_{k}) p(\theta_k \mid M_k) p(M_k) d\theta_k$
+for unknown model parameters $\theta_k$ in model $k$ is the integrated or marginal likelihood
+for model $k$.
 The posterior model probabilities are then used to average
 predictions of new data $\tilde{y}$: 
 
@@ -35,16 +38,14 @@ predictions of new data $\tilde{y}$:
     p(\tilde{y} \mid y) = \sum_{k=1}^{K} p(\tilde{y} \mid M_{k}) p(M_{k} \mid y)
 \end{equation}
 
-where $p(y \mid M_k) = \int p(y \mid \theta_k) p(\theta_k \mid M_k) p(M_k) d\theta_k$
-for unknown model parameters $\theta_k$ in model $k$ is the integrated or marginal likelihood
-for model $k$. Typically, BMA proceeds by estimating the posterior
+Typically, BMA proceeds by estimating the posterior
 distribution of each model separately, recognizing that
 $p(M_k \mid y) \propto p(y \mid M_k) p(M_k)$, choosing a suitable
 value for prior model probability $p(M_k)$ (e.g. uniform values), and renormalizing
 to obtain posterior model probabilities. Alternatively, one can
 obtain posterior model probabilities from the Bayes factor (the ratio
 of marginal likelihoods) with user-chosen prior model probabilities
-([Hoeting *et al*., 1999](file:///Users/cmgoold/Downloads/1009212519.pdf)].
+([Hoeting *et al*., 1999](file:///Users/cmgoold/Downloads/1009212519.pdf)).
 
 There are two aspects of BMA that have made other approaches preferable:
 1) marginal likelihoods for each candidate model can be difficult
@@ -52,7 +53,7 @@ to calculate and 2) BMA allocates weights as if the candidate
 models were the only plausible models. Paraphrasing [Kruschke (2011)](
 https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36edd08030b28d7b549e7c39c630e051e231bd98),
 if Bayesian parameter estimation is re-allocating credibility across
-possible parameter values, BMA is allocating credibility across
+possible parameter values, BMA is re-allocating credibility across
 possible hypotheses or models.
 This is a reasonable approach if the set of candidate models
 contain the true model, or something close to the true model, 
@@ -64,14 +65,15 @@ where the latter is an $\mathcal{M}$-open problem
 In the $\mathcal{M}$-open setting, BMA will place 
 100% weight on the most credible of candidate models
 as the amount of data $N \to \infty$, as would be expected
-by Bayesian inference generally.
+by Bayesian inference generally, which is different to
+identifying the 'true' data-generating process.
 
 What are we to do in the $\mathcal{M}$-open setting? 
 The now-standard approach is to derive weights not from the training data
 but using a measure of the generalization error of a model,
 such as cross-validation (e.g.
 [Wolpert, 1992](https://www.sciencedirect.com/science/article/abs/pii/S0893608005800231)).
-[Yao *et al*., 2018](
+[Yao *et al*., (2018)](
 http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
 ) introduced 
 *pseudo-Bayesian model averaging* (pseudo-BMA) 
@@ -79,9 +81,9 @@ as a method of deriving weights using the expected log pointwise
 predictive densities (ELPD) for each model obtained via cross-validation
 with [PSIS-LOO](https://arxiv.org/abs/1507.04544).
 The ELPD values are normalized to obtain a set of weights that sum to 1.
-In addition, *pseudoa-Bayesian model averaging plus* (pseudo-BMA+)
+In addition, *pseudo-Bayesian model averaging plus* (pseudo-BMA+)
 accounts for uncertainty in the information criteria by applying
-the Bayesian bootstrap to log likelihood vectors.
+the Bayesian bootstrap to cross-validation ELPD estimates first.
 
 [Stacking](
 https://en.wikipedia.org/wiki/Ensemble_learning#Stacking
@@ -93,19 +95,19 @@ the weights, $\hat{w}$, are the solution to:
 
 \begin{equation}
     \tag{Stacking}
-    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} \sum_{k=1}^{K} w_{k} f(y_{i}, p(\Theta_{k} \mid \mathbf{y}))
+    \hat{w} = \mathrm{arg} \min_{w} \sum_{i=1}^{N} \sum_{k=1}^{K} w_{k} f(\tilde{y}_{i}, p(\Theta_{k}, M_k \mid \mathbf{y}))
 \end{equation}
 
-where $y_{i}$ is the (potentially out-of-sample) observed data, 
+where $\tilde{y}_{i}$ is the future data (e.g. test data),
 $w_{k}$ is the weight for model $k$,
-and $f(y_{i}, p(\theta_{k} \mid \mathbf{y})$
-represents any cross-validation based scoring rule
-used to evaluate data point $y_{i}$ from
-the posterior distribution of model $k$, $p(\Theta_{k} \mid \mathbf{y})$,
+and $f(y_{i}, p(\theta_{k}, M_k \mid \mathbf{y})$
+represents any scoring rule
+used to evaluate data point $\tilde{y}_{i}$ from
+the posterior distribution of model $k$, $p(\Theta_{k}, M_k \mid \mathbf{y})$,
 with parameters $\Theta_{k}$.
 While stacking has a long history
 ([Wolpert, 1992](https://www.sciencedirect.com/science/article/abs/pii/S0893608005800231)),
-[Yao *et al*., 2018](
+[Yao *et al*., (2018)](
 http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
 ) generalized stacking in a Bayesian context.
 
