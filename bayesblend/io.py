@@ -137,7 +137,7 @@ class Draws:
         return cls(**samples)
 
     @classmethod
-    def from_lpd(cls, lpd: np.ndarray, post_pred: Optional[np.ndarray] = None) -> Draws:
+    def from_lpd(cls, lpd: np.ndarray, post_pred: np.ndarray | None = None) -> Draws:
         shape = (1, len(lpd)) if post_pred is None else post_pred.shape
         lpd_full = np.full(shape, lpd.reshape((1, len(lpd))))
         return cls(log_lik=lpd_full, post_pred=post_pred)

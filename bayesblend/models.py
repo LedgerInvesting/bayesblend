@@ -267,11 +267,12 @@ class BayesBlendModel(ABC):
     def from_lpd(
         cls,
         lpd: Dict[str, np.ndarray],
-        post_pred: Optional[Dict[str, np.ndarray]] = None,
+        post_pred: Dict[str, np.ndarray] | None = None,
         **kwargs,
     ):
+
         if post_pred is None:
-            post_pred = {k: None for k in lpd}
+            post_pred = {k: None for k in lpd} # type: ignore
 
         return cls(
             {
