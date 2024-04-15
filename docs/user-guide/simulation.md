@@ -5,44 +5,62 @@ this tutorial compares [mixture modeling](
 https://en.wikipedia.org/wiki/Mixture_model
 ) to different model averaging approaches 
 possible in BayesBlend: pseudo-BMA, pseudo-BMA+,
-and maximum-likelihood estimated stacking and 
-Bayesian estimated stacking. BayesBlend is the only
+maximum-likelihood stacking and 
+Bayesian stacking. BayesBlend is the only
 software we're aware of that offers stacking using 
 full Bayesian inference out-of-the-box.
 
 Most model averaging methods are closely related to mixture
-modelling, but differ in that they're often applied
-in two separate steps: one to estimate the quantity
+modelling. Traditional [Bayesian model averaging](
+https://en.wikipedia.org/wiki/Ensemble_learning#Bayesian_model_averaging
+) (BMA), for instance,
+averages models, $\mathcal{M} = \{M_{1}, ..., M_{K}\}$,
+based on their posterior model probabilities,
+$p(M_{k} \mid y) = \frac{p(y \mid M_{k}) p(M_{k})}{\sum_{k = 1}^{K} p(y \mid M_{k}) p(M_{k})}$, 
+where the posterior model probabilities are commonly
+calculated as a function of the marginal likelihood,
+$\int p(y \mid \theta, M_k) p(\theta_k \mid M_k) p(\theta_k) d\theta_k$,
+and user-defined prior model probabilities, $P(M_k \mid y)$
+([Hoeting *et al.*, 1999](file:///Users/cmgoold/Downloads/1009212519.pdf),
+[Hinne *et al*., 2020](https://journals.sagepub.com/doi/full/10.1177/2515245919898657?trk=public_post_comment-text#appendix)
+). However, the posterior model weights can also be
+estimated directly by making $M_k$ a parameter
+of a mixture model
+([Kruschke, 2011](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36edd08030b28d7b549e7c39c630e051e231bd98),
+[Keller & Kamary, 2017](https://arxiv.org/abs/1711.10016)).
+Notice that the mixture modelling/BMA approach
+allocates posterior weight to models only within
+the space of candidate models, as is the process
+of Bayesian updating.
+This makes most sense when the true model can be conceived
+as one of the candidate models, a problem
+that is referred to as $\mathcal{M}$-closed.
+
+Model averaging approaches implemented in BayesBlend and elsewhere,
+however, differ from the mixture modelling approach by splitting
+the problem into two separate steps: one to estimate the quantity
 of interest from each candidate model, and another to
 estimate the model weights and blend predictions.
-In practice, model averaging methods, like stacking,
-are usually quicker and less prone to
-estimation errors ([Yao *et al.*, 2018](
+In the first step, it is common to use cross-validation
+to obtain estimates of candidate model predictive performance
+that generalizes to data not seen in the training set,
+effectively opening up the set of candidate models being
+compared. This is partciularly powerful in $\mathcal{M}$-open
+problems, where the true model is not one of the candidate
+models because the true model is unknown, intractable
+or too complex to reify
+([Yao *et al.*, 2018](
 http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
-)),
-and may perform better than mixture modelling
-because the quantities used to compare models
-focus on out-of-sample predictive accuracy, not just
-in-sample performance.
-This is particularly the case in $\mathcal{M}$-open settings,
-where the true model is not in the set of
-candidate models $\mathcal{M} = \{M_{1}, ..., M_{K}\}$
-because it is unknown, intractable or otherwise too complex
-to specify.
+)).
+Two-step model averaging methods have the
+additional benefits of being
+computationally faster and less prone to
+estimation errors. 
 
-Mixture modelling has also been found to be 
-similar to the traditional technique of
-[Bayesian model averaging](
-https://arxiv.org/abs/1711.10016
-), as the expectation of the 
-posterior distribution of the mixture weights
-approximates the marginal model likelihoods.
-However, see [Yao *et al.* (2018)](
-http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
-) for discussion of their potential differences.
+## Simulation example 
 
 In this example,
-we simulate univariate test data of 
+we simulate univariate data of 
 size $N = 50$ from the following
 model:
 
@@ -94,31 +112,38 @@ The mixture model fits all three models simultaneously,
 estimating the simplex of model probabilities, 
 $\mathbf{w} = (w_1, w_2, w_3)$,
 with a uniform Dirichlet prior.
-In practice, the mixture weights are marginalized 
-out of the likelihood expression.
 
 \begin{align}
     \tag{Mixture}
-    y_{i} &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{k}, 1)\\
+    k &\sim \mathrm{Categorical(\mathbf{w})}\\
     \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
 \end{align}
 
-We simulate $M = 100$ data sets of training and test data
-and then, for each simulation $m$, we:
+In practice, the categorical parameter, $k$, is marginalized 
+out of the likelihood expression:
+
+\begin{align}
+    p(y_{i}) &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
+    \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
+\end{align}
+
+We simulate $S = 100$ data sets of training and test data
+and then, for each simulation $s$, we:
 
 1. Fit the mixture model and evaluate the log predictive densities of `y_tilde`
 from each mixture component, 
 which we denote as $\log{p(\tilde{y} \mid M_{k})}$.
 2. Fit the independent regression models and evaluate both $\log{p(y \mid M_{k})}$ and 
 $\log{p(\tilde{y} \mid M_{k})}$.
-3. Estimate the Pareto-smoothed importance sampling (PSIS) leave-one-out predictive
-densities (LOO) of $\log{p(y \mid M_{k})}$.
+3. Estimate the Pareto-smoothed importance sampling (PSIS) leave-one-out (LOO) cross-validation predictive
+densities of $\log{p(y \mid M_{k})}$.
 3. Fit the pseudo-BMA, pseudo-BMA+, stacking-mle (using maximum-likelihood optimization)
 and stacking-bayes (using full Bayesian inference) to the PSIS-LOO log densities from step
 3 to estimate the optimal weights for blending. 
 4. Blend $\log{p(\tilde{y} \mid M_{k})}$ according to the weights from the mixture model
-and those estimated in step 3. We always take the expectation of the weights,
-even in the mixture and stacking-bayes cases where we have a posterior for each weight.
+and those estimated in step 3. We always take the expectation of the weights in cases
+where we have a posterior of $p(M_k \mid y)$.
 5. Calculate the [ELPD](https://stat.columbia.edu/~gelman/research/unpublished/loo_stan.pdf)
 from the blended out-of-sample log densities to compare the models.
 
@@ -401,3 +426,29 @@ from each model.
 
 ![comparison](scripts/figures/stacking-compare.png)
 
+As the ELPD values show, the BayesBlend model avergaing
+methods all perform better than the mixture modelling
+approach for this example, indicating that the
+use of PSIS-LOO estimates to obtain the model
+weights offers an non-trivial performance
+improvement. The differences between
+pseudo-BMA, pseudo-BMA+, stacking-mle
+and stacking-bayes are very small for this
+example, although this might not always be
+the case
+([see Yao *et al.*, 2018](
+http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
+)).
+
+The estimated weights across methods
+mostly weight models 1 and 2 equally,
+and model 3 the least plausible. Notice
+that the stacking-mle model has much larger
+percentile intervals because it often
+places most weight on either model 1 or model 2
+rather than dividing weight equally,
+which is expected from a pure optimization
+process if models 1 and 2 provide similar predictions.
+The Bayesian stacking implementation weights (stacking-bayes)
+places a prior over the weights, however, which means
+its weights are much more uniform between models.
