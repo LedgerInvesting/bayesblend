@@ -253,26 +253,32 @@ class BayesBlendModel(ABC):
         model_fits: Dict[str, az.InferenceData],
         log_lik_name: str = "log_lik",
         post_pred_name: str = "post_pred",
+        **kwargs,
     ) -> BayesBlendModel:
         return cls(
             {
                 model: Draws.from_arviz(fit, log_lik_name, post_pred_name)
                 for model, fit in model_fits.items()
-            }
+            },
+            **kwargs,
         )
 
     @classmethod
     def from_lpd(
         cls,
         lpd: Dict[str, np.ndarray],
-        post_pred: Dict[str, np.ndarray],
+        post_pred: Dict[str, np.ndarray] | None = None,
+        **kwargs,
     ):
+        if post_pred is None:
+            post_pred = {k: None for k in lpd}  # type: ignore
+
         return cls(
             {
                 name: Draws.from_lpd(lpd=ll, post_pred=pp)
-                for (name, ll), pp
-                in zip(*[lpd.items(), post_pred.values()])
-            }
+                for (name, ll), pp in zip(*[lpd.items(), post_pred.values()])
+            },
+            **kwargs,
         )
 
 
@@ -293,17 +299,22 @@ class SimpleBlend(BayesBlendModel):
     """
 
     def __init__(
-        self, 
+        self,
         model_draws: Dict[str, Draws],
         weights: Weights,
     ) -> None:
         super().__init__(model_draws)
         first_weight = weights[next(iter(weights))]
         if isinstance(first_weight, (list, float)):
-            weights = {k: np.array(w if isinstance(w, list) else [w]) for k, w in weights.items()}
+            weights = {
+                k: np.array(w if isinstance(w, list) else [w])
+                for k, w in weights.items()
+            }
         if any(w.ndim > 2 for w in weights.values()):
             bad_shapes = [w.shape for w in weights.values()]
-            raise ValueError(f"Weights should be shaped as (weights, 1) or (weights, ), not {bad_shapes}.")
+            raise ValueError(
+                f"Weights should be shaped as (weights, 1) or (weights, ), not {bad_shapes}."
+            )
         if len(weights) != len(model_draws):
             raise ValueError("Weights and model_draws should be the same length.")
         wshape = weights[next(iter(weights))].shape
@@ -322,7 +333,6 @@ class SimpleBlend(BayesBlendModel):
         return blend if not return_weights else (blend, self.weights)
 
 
-
 class MleStacking(BayesBlendModel):
     """Subclass to compute weights by MLE stacking.
 
@@ -331,7 +341,7 @@ class MleStacking(BayesBlendModel):
     across log predictive densities. Approximate log predictive densities
     can be obtained via PSIS-LOO or PSIS-LFO.
 
-    The fitting routine largely follows the implementation in Arviz. 
+    The fitting routine largely follows the implementation in Arviz.
     See:
     * https://github.com/arviz-devs/arviz/blob/main/arviz/stats/stats.py#L223-L250
 
@@ -357,7 +367,7 @@ class MleStacking(BayesBlendModel):
         """Jacobian of the objective function.
 
         The gradient of log(Y @ w) wrt w is 1/(Y @ w) Y, using
-        the chain rule. 
+        the chain rule.
         """
         Y = args[0]
         N, K = Y.shape
@@ -1155,9 +1165,6 @@ def _make_dummy_vars(
         ],
         axis=1,
     ).to_dict("list")
-
-
-
 
 
 def _concat_array_empty(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray:

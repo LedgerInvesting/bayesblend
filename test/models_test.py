@@ -7,7 +7,13 @@ import numpy as np
 import pytest
 from cmdstanpy import CmdStanModel
 
-from bayesblend import SimpleBlend, BayesStacking, HierarchicalBayesStacking, MleStacking, PseudoBma
+from bayesblend import (
+    SimpleBlend,
+    BayesStacking,
+    HierarchicalBayesStacking,
+    MleStacking,
+    PseudoBma,
+)
 from bayesblend.io import Draws
 
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
@@ -117,12 +123,11 @@ def test_simple_blend_valid_predictions():
 
 def test_simple_blend_catches_errors():
     with pytest.raises(ValueError):
-        w = {k: [[[1/len(MODEL_DRAWS)]]] for k in MODEL_DRAWS}
+        w = {k: [[[1 / len(MODEL_DRAWS)]]] for k in MODEL_DRAWS}
         SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
     with pytest.raises(ValueError):
         w = {k: 0.5 for k in range(4)}
         SimpleBlend(model_draws=MODEL_DRAWS, weights=w)
-
 
 
 def test_model_weights_valid():
@@ -491,7 +496,9 @@ def test_models_io_arviz():
     arviz_blend = blend.to_arviz(dims=(4, 1000, 10))
     assert isinstance(arviz_blend, az.InferenceData)
     assert np.all(np.vstack(arviz_blend.log_likelihood.log_lik.values) == blend.log_lik)
-    assert np.all(np.vstack(arviz_blend.posterior_predictive.post_pred.values) == blend.post_pred)
+    assert np.all(
+        np.vstack(arviz_blend.posterior_predictive.post_pred.values) == blend.post_pred
+    )
     with pytest.warns(UserWarning, match=r"More chains \(4000\) than draws \(10\)."):
         blend.to_arviz()
 
@@ -500,16 +507,8 @@ def test_models_from_lpd():
     # Generate some fake LPDs.
     # note, we just take the mean here,
     # not the logmeanexp
-    lpds = {
-        name: fit.log_lik.mean(axis=0)
-        for name, fit
-        in MODEL_DRAWS.items()
-    }
-    post_preds = {
-        name: fit.post_pred
-        for name, fit
-        in MODEL_DRAWS.items()
-    }
+    lpds = {name: fit.log_lik.mean(axis=0) for name, fit in MODEL_DRAWS.items()}
+    post_preds = {name: fit.post_pred for name, fit in MODEL_DRAWS.items()}
     assert MleStacking.from_lpd(lpds, post_preds)
 
 
