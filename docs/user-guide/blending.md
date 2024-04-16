@@ -10,7 +10,7 @@ The process of *model averaging*, which is part of
 [ensemble learning](https://en.wikipedia.org/wiki/Ensemble_learning),
 means to take a weighted 
 average of (posterior) predictions from a set of $K$ models, 
-$\mathcal{M} = \{M_{k}, k = 1, ..., K\}$.
+$\mathcal{M} = \{M_{1}, M_{2}, ..., M_{k}\}$.
 Currently, there are a number of methods used to derive
 model weights to average predictions.
 
@@ -64,8 +64,9 @@ where the latter is an $\mathcal{M}$-open problem
 [Clyde & Iverson, 2012](file:///Users/cmgoold/Downloads/AdrianSmithVol-M-Open%20(1).pdf)).
 In the $\mathcal{M}$-open setting, BMA will place 
 100% weight on the most credible of candidate models
+that minimizes Kullback-Leibler divergence
 as the amount of data $N \to \infty$, as would be expected
-by Bayesian inference generally, which is different to
+by Bayesian inference generally. This is different to
 identifying the 'true' data-generating process.
 
 What are we to do in the $\mathcal{M}$-open setting? 
@@ -78,12 +79,13 @@ http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussio
 ) introduced 
 *pseudo-Bayesian model averaging* (pseudo-BMA) 
 as a method of deriving weights using the expected log pointwise
-predictive densities (ELPD) for each model obtained via cross-validation
+predictive densities (ELPD) for each model obtained via approximate
+cross-validation
 with [PSIS-LOO](https://arxiv.org/abs/1507.04544).
 The ELPD values are normalized to obtain a set of weights that sum to 1.
 In addition, *pseudo-Bayesian model averaging plus* (pseudo-BMA+)
 accounts for uncertainty in the information criteria by applying
-the Bayesian bootstrap to cross-validation ELPD estimates first.
+the Bayesian bootstrap to the PSIS-LOO estimates of ELPD first.
 
 [Stacking](
 https://en.wikipedia.org/wiki/Ensemble_learning#Stacking
@@ -91,7 +93,8 @@ https://en.wikipedia.org/wiki/Ensemble_learning#Stacking
 is an alternative method of deriving model weights in the
 $\mathcal{M}$-open setting
 by solving an optimization problem. Specifically, 
-the weights, $\hat{w}$, are the solution to:
+the weights, $\hat{w} = (w_{1}, w_{2}, ..., w_{K})$, 
+are those that satisfy:
 
 \begin{equation}
     \tag{Stacking}
@@ -107,9 +110,16 @@ the posterior distribution of model $k$, $p(\Theta_{k}, M_k \mid \mathbf{y})$,
 with parameters $\Theta_{k}$.
 While stacking has a long history
 ([Wolpert, 1992](https://www.sciencedirect.com/science/article/abs/pii/S0893608005800231)),
-[Yao *et al*., (2018)](
+it is has relatively recently been generalized to
+a Bayesian context
+([Clyde & Iversen, 2013](
+https://www.researchgate.net/profile/Merlise-Clyde/publication/261252831_Bayesian_Model_Averaging_in_the_M-Open_Framework/links/59fd4b820f7e9b9968c09d99/Bayesian-Model-Averaging-in-the-M-Open-Framework.pdf
+),
+[Le & Clarke, 2017](
+https://projecteuclid.org/journals/bayesian-analysis/volume-12/issue-3/A-Bayes-Interpretation-of-Stacking-for-M-Complete-and-M/10.1214/16-BA1023.full
+), [Yao *et al*., (2018)](
 http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussion_rejoinder.pdf
-) generalized stacking in a Bayesian context.
+)).
 
 The appeal of stacking, apart from its reported improved predictive
 accuracy over other procedures (see e.g. 

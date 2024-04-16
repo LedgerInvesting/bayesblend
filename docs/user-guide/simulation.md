@@ -30,8 +30,7 @@ of a mixture model
 [Keller & Kamary, 2017](https://arxiv.org/abs/1711.10016)).
 Notice that the mixture modelling/BMA approach
 allocates posterior weight to models only within
-the space of candidate models, as is the process
-of Bayesian updating.
+the space of candidate models.
 This makes most sense when the true model can be conceived
 as one of the candidate models, a problem
 that is referred to as $\mathcal{M}$-closed.
@@ -54,15 +53,18 @@ http://www.stat.columbia.edu/~gelman/research/published/stacking_paper_discussio
 )).
 Two-step model averaging methods have the
 additional benefits of being
-computationally faster and less prone to
-estimation errors. 
+computationally faster and less prone
+identifiability and convergence problems
+which are common in mixture modeling.
 
 ## Simulation example 
 
 In this example,
-we simulate univariate data of 
-size $N = 50$ from the following
-model:
+we simulate univariate data $y$ of 
+size $N = 50$ from a normal distribution
+with mean $\alpha$ and, independently,
+variables $\mathbf{X} = (\mathbf{x}_{1}, \mathbf{x}_{2})'$
+from a standard normal distribution:
 
 \begin{align}
     \tag{True model}
@@ -71,12 +73,12 @@ model:
     \alpha &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
-as well as $\tilde{N} = 50$ test data from the same model.
+We also simulate $\tilde{N} = 50$ test data from the same model.
 
 We then use three candidate models that each 
 incorrectly presume that the variables $\mathbf{x}_1$
 and $\mathbf{x}_2$ are linearly related to the
-response, $\mathbf{y}$.
+response variable, $\mathbf{y}$.
 
 Model 1 includes a single predictor $\mathbf{x}_{1} = (x_{11}, x_{21}, ..., x_{i1}, ..., x_{N1})$:
 
@@ -98,7 +100,7 @@ Model 2 includes a single predictor $\mathbf{x}_{2}$:
     \beta &\sim \mathrm{Normal}(0, 1)\\
 \end{align}
 
-Model 3 includes both predictors but not their interaction:
+Model 3 includes both predictors:
 
 \begin{align}
     \tag{Model 3}
@@ -417,16 +419,18 @@ on each model.
 Below is the comparison plot for the models.
 The top panel shows the mean ELPDs for each model
 (blue points) with their 95% percentile intervals
-(vertical lines). The gray open circles are all
+(vertical lines) across the 100 simulations. 
+The gray open circles are all
 the ELPDs from each model.
 
 The second panel shows the mean and 95% percentile
-intervals of the estimated weights
+intervals across the 100 simulations
+of the estimated weights
 from each model.
 
 ![comparison](scripts/figures/stacking-compare.png)
 
-As the ELPD values show, the BayesBlend model avergaing
+As the ELPD values show, the BayesBlend model averaging
 methods all perform better than the mixture modelling
 approach for this example, indicating that the
 use of PSIS-LOO estimates to obtain the model
@@ -453,3 +457,9 @@ The Bayesian stacking implementation (stacking-bayes)
 places a prior over the weights, however, which means
 its weights are much more uniform between models than
 its MLE counterpart.
+
+The pseudo-BMA weights' percentile intervals are slightly 
+wider than the pseudo-BMA+ weights, which is also expected
+since pseudo-BMA+ will regularize weights slightly 
+away from 0 and 1 compared to pseudo-BMA as a consequence of
+Bayesian bootstrapping of log predictive densities.
