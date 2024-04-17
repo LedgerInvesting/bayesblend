@@ -117,7 +117,12 @@ with a uniform Dirichlet prior.
 
 \begin{align}
     \tag{Mixture}
-    y_{i} &\sim \mathrm{Normal}(\mu_{k}, 1)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{ik}, 1)\\
+    \mu_{i1} &= \alpha_{1} + \beta_{1} x_{i1}\\
+    \mu_{i2} &= \alpha_{2} + \beta_{2} x_{i2}\\
+    \mu_{i3} &= \alpha_{3} + \beta_{3} x_{i1} + \beta_{4} x_{i2}\\
+    \alpha_{1:K} &\sim \mathrm{Normal}(0, 1)\\
+    \beta_{1:4} &\sim \mathrm{Normal}(0, 1)\\
     k &\sim \mathrm{Categorical(\mathbf{w})}\\
     \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
 \end{align}
@@ -127,7 +132,6 @@ out of the likelihood expression:
 
 \begin{align}
     p(y_{i}) &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
-    \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
 \end{align}
 
 We simulate $S = 100$ data sets of training and test data

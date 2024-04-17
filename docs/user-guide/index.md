@@ -5,5 +5,5 @@ that illustrate the use of BayesBlend.
 
 * [Getting started](getting-started.md)
 * [Model averaging, stacking and blending](blending.md)
-* [Comparing mixture modelling to pseudo-BMA+ and stacking](simulation.md)
+* [Model averaging via mixture modeling, pseudo-BMA, pseudo-BMA+ and stacking](simulation.md)
 * [Integration with ArviZ](arviz.md)
