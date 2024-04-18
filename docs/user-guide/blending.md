@@ -28,7 +28,7 @@ Bayesian models using posterior model probabilities:
         }
 \end{equation}
 
-where $p(y \mid M_k) = \int p(y \mid \theta_k, M_{k}) p(\theta_k \mid M_k) p(M_k) d\theta_k$
+where $p(y \mid M_k) = \int p(y \mid \theta_k, M_{k}) p(\theta_k \mid M_k) d\theta_k$
 for unknown model parameters $\theta_k$ in model $k$ is the integrated or marginal likelihood
 for model $k$.
 The posterior model probabilities are then used to average
