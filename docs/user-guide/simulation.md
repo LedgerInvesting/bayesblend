@@ -203,7 +203,7 @@ We can use Stan to fit the implied mixture model between candidate models.
 In the generated quantities section, we evaluate the log predictive
 densities on `y_tilde` from each model separately, $\log{p(\tilde{y} \mid M_{k})}$,
 not accounting for the weights at this time. We also derive the posterior
-model probabilities using Bayes' rule in the generated quantities (see
+model probabilities using Baye's rule in the generated quantities (see
 the Stan manual entry on [Finite mixtures](
 https://mc-stan.org/docs/stan-users-guide/finite-mixtures.html#recovering-posterior-mixture-proportions
 ). The weights are applied using
@@ -211,51 +211,50 @@ BayesBlend later.
 
 ```stan title="mixture.stan"
 data {
-    int<lower=0> N;
-    int<lower=0> N_tilde;
-    int<lower=2> K;
-    int<lower=1> P;
-    matrix[N, P] X;
-    matrix[N_tilde, P] X_tilde;
-    vector[N] y;
-    vector[N_tilde] y_tilde;
+	int<lower=0> N;
+	int<lower=0> N_tilde;
+	int<lower=2> K;
+	int<lower=1> P;
+	matrix[N, P] X;
+	matrix[N_tilde, P] X_tilde;
+	vector[N] y;
+	vector[N_tilde] y_tilde;
 }
 
 parameters {
-    vector[K] alpha;
-    vector[P + 2] beta;
-    simplex[K] w;
+	vector[K] alpha;
+	vector[P + 2] beta;
+	simplex[K] w;
 }
 
 transformed parameters {
-    matrix[N, K] lps;
+	vector[K] lps = log(w);
 
-    for(i in 1:N) {
-        lps[i] = [
-            log(w[1]) + normal_lpdf(y[i] | alpha[1] + beta[1] * X[i,1], 1),
-            log(w[2]) + normal_lpdf(y[i] | alpha[2] + beta[2] * X[i,2], 1),
-            log(w[3]) + normal_lpdf(y[i] | alpha[3] + X[i] * beta[3:], 1)
-        ];
-    }
+	for(i in 1:N) {
+		lps = [
+			lps[1] + normal_lpdf(y[i] | alpha[1] + beta[1] * X[i,1], 1),
+			lps[2] + normal_lpdf(y[i] | alpha[2] + beta[2] * X[i,2], 1),
+			lps[3] + normal_lpdf(y[i] | alpha[3] + X[i] * beta[3:], 1)
+		]';
+	}
 }
 
 model {
-    alpha ~ std_normal();
-    beta ~ std_normal();
-
-    for(i in 1:N)
-        target += log_sum_exp(lps[i]);
+	alpha ~ std_normal();
+	beta ~ std_normal();
+	target += log_sum_exp(lps);
 }
 
 generated quantities {
 	matrix[N_tilde, K] log_lik;
-	simplex[K] pmp; // posterior model probability
+	// posterior model probability
+	simplex[K] pmp;
 
 	for(k in 1:K) {
-		// p(M_k | y) \propto p(y | M_k) p(M_k | w)
 		pmp[k] = exp(
 			lps[k] - log_sum_exp(lps)
-	);
+		);
+	}
 
 	for(j in 1:N_tilde) {
 		log_lik[j] = [
