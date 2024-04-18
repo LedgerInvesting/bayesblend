@@ -111,30 +111,32 @@ Model 3 includes both predictors:
 \end{align}
 
 The mixture model fits all three models simultaneously,
-where we give the discrete parameter $k$, indexing model $M_{k}$,
+where we include a discrete parameter $z$, which indicates
+whether to sample from model $M_{1}$, $M_{2}$ or $M_{3}$
+above. This parameter is given a 
 a categorical distribution with Dirichlet probabilities
 $\mathbf{w}$:
 
 \begin{align}
     \tag{Mixture}
-    y_{i} &\sim \mathrm{Normal}(\mu_{ik}, 1)\\
+    y_{i} &\sim \mathrm{Normal}(\mu_{iz}, 1)\\
     \mu_{i1} &= \alpha_{1} + \beta_{1} x_{i1}\\
     \mu_{i2} &= \alpha_{2} + \beta_{2} x_{i2}\\
     \mu_{i3} &= \alpha_{3} + \beta_{3} x_{i1} + \beta_{4} x_{i2}\\
     \alpha_{1:K} &\sim \mathrm{Normal}(0, 1)\\
     \beta_{1:4} &\sim \mathrm{Normal}(0, 1)\\
-    k &\sim \mathrm{Categorical(\mathbf{w})}\\
+    z &\sim \mathrm{Categorical(\mathbf{w})}\\
     \mathbf{w}_{1:K} &\sim \mathrm{Dirichlet}( (1, 1, 1)')\\
 \end{align}
 
-In practice, the categorical parameter, $k$, is marginalized 
+In practice, the categorical parameter, $z$, is marginalized 
 out of the likelihood expression:
 
 \begin{align}
-    p(y_{i}) &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
+    p(y_{i}, u_{iz}, w_{z}) &= \sum_{z=1}^{K} w_{z} \cdot \mathrm{Normal}(\mu_{iz}, 1)\\
 \end{align}
 
-and we recover the posterior $p(k \mid y, u_{k}, w_{k})$ after model fitting.
+and we recover the posterior $p(z \mid y, u_{zi}, w_{z})$ after model fitting.
 
 We simulate $S = 100$ data sets of training and test data
 and then, for each simulation $s$, we:
@@ -250,7 +252,7 @@ generated quantities {
 	simplex[K] pmp; // posterior model probability
 
 	for(k in 1:K) {
-		// p(k | y) \propto p(y | k) p(k | w)
+		// p(M_k | y) \propto p(y | M_k) p(M_k | w)
 		pmp[k] = exp(
 			lps[k] - log_sum_exp(lps)
 	);
