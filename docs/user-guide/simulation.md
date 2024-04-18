@@ -26,7 +26,7 @@ and user-defined prior model probabilities, $P(M_k \mid y)$
 ). However, the posterior model weights can also be
 estimated directly by making $M_k$ a parameter
 of a mixture model
-([Kruschke, 2011](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=36edd08030b28d7b549e7c39c630e051e231bd98),
+([Kruschke, 2014](https://jkkweb.sitehost.iu.edu/DoingBayesianDataAnalysis/)
 [Keller & Kamary, 2017](https://arxiv.org/abs/1711.10016)).
 Notice that the mixture modelling/BMA approach
 allocates posterior weight to models only within
@@ -111,9 +111,9 @@ Model 3 includes both predictors:
 \end{align}
 
 The mixture model fits all three models simultaneously,
-estimating the simplex of model probabilities, 
-$\mathbf{w} = (w_1, w_2, w_3)$,
-with a uniform Dirichlet prior.
+where we give the discrete parameter $k$, indexing model $M_{k}$,
+a categorical distribution with Dirichlet probabilities
+$\mathbf{w}$:
 
 \begin{align}
     \tag{Mixture}
@@ -133,6 +133,8 @@ out of the likelihood expression:
 \begin{align}
     p(y_{i}) &= \sum_{k=1}^{K} w_{k} \cdot \mathrm{Normal}(\mu_{k}, 1)\\
 \end{align}
+
+and we recover the posterior $p(k \mid y, u_{k}, w_{k})$ after model fitting.
 
 We simulate $S = 100$ data sets of training and test data
 and then, for each simulation $s$, we:
@@ -198,7 +200,11 @@ def simulate_data(seed: Optional[int] = None) -> Tuple[Data, Data]:
 We can use Stan to fit the implied mixture model between candidate models.
 In the generated quantities section, we evaluate the log predictive
 densities on `y_tilde` from each model separately, $\log{p(\tilde{y} \mid M_{k})}$,
-not accounting for the weights at this time. The weights are applied using
+not accounting for the weights at this time. We also derive the posterior
+model probabilities using Baye's rule in the generated quantities (see
+the Stan manual entry on [Finite mixtures](
+https://mc-stan.org/docs/stan-users-guide/finite-mixtures.html#recovering-posterior-mixture-proportions
+). The weights are applied using
 BayesBlend later.
 
 ```stan title="mixture.stan"
@@ -240,15 +246,22 @@ model {
 }
 
 generated quantities {
-    matrix[N_tilde, K] log_lik;
+	matrix[N_tilde, K] log_lik;
+	simplex[K] pmp; // posterior model probability
 
-    for(j in 1:N_tilde) {
-        log_lik[j] = [
-            normal_lpdf(y_tilde[j] | alpha[1] + beta[1] * X_tilde[j,1], 1),
-            normal_lpdf(y_tilde[j] | alpha[2] + beta[2] * X_tilde[j,2], 1),
-            normal_lpdf(y_tilde[j] | alpha[3] + X_tilde[j] * beta[3:], 1)
-        ];
-    }
+	for(k in 1:K) {
+		// p(k | y) \propto p(y | k) p(k | w)
+		pmp[k] = exp(
+			lps[k] - log_sum_exp(lps)
+	);
+
+	for(j in 1:N_tilde) {
+		log_lik[j] = [
+			normal_lpdf(y_tilde[j] | alpha[1] + beta[1] * X_tilde[j,1], 1),
+			normal_lpdf(y_tilde[j] | alpha[2] + beta[2] * X_tilde[j,2], 1),
+			normal_lpdf(y_tilde[j] | alpha[3] + X_tilde[j] * beta[3:], 1)
+		];
+	}
 }
 ```
 
@@ -386,7 +399,7 @@ pred_draws = {
 # Mixture model blend
 mix = bb.SimpleBlend(
     {f"fit{i}": bb.Draws(log_lik=mixture.log_lik[..., i]) for i in range(K)},
-    weights={f"fit{i}": w for i, w in enumerate(mixture.w.T)},
+    weights={f"fit{i}": pmp for i, pmp in enumerate(mixture.pmp.T)},
 )
 mix_blend = mix.predict()
 
