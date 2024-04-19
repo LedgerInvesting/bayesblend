@@ -2,6 +2,35 @@
 
 
 
+## v0.0.6 (2024-04-19)
+
+### Ci
+
+* ci: public release
+
+turning on the PyPI upload flag to kick off a public release ([`6018126`](https://github.com/LedgerInvesting/bayesblend/commit/601812651331e4482e2ca4176d66088939f5ca0a))
+
+### Fix
+
+* fix: docstring update ([`9d1386a`](https://github.com/LedgerInvesting/bayesblend/commit/9d1386a3fc597c9bd0a0dd691a346a0a66e4f837))
+
+* fix: rm todo from install ([`f04c8c8`](https://github.com/LedgerInvesting/bayesblend/commit/f04c8c88fc6d204f48d8129e874c8f0cf5666e14))
+
+### Unknown
+
+* Merge pull request #37 from LedgerInvesting/fix-docstring
+
+fix: docstring update ([`7cd4195`](https://github.com/LedgerInvesting/bayesblend/commit/7cd419571b2320571b200873efab5e47b477d19f))
+
+* Merge pull request #36 from LedgerInvesting/docs-public-release
+
+ci: public release ([`a7dbb00`](https://github.com/LedgerInvesting/bayesblend/commit/a7dbb0072582bf1cf93fabf64bd6cdec9290c5a1))
+
+* Merge pull request #34 from LedgerInvesting/docs-add-pmp
+
+docs: fix PMP calculation ([`1c65be7`](https://github.com/LedgerInvesting/bayesblend/commit/1c65be77e0f718a2e633bc055b7986925b1ac327))
+
+
 ## v0.0.5 (2024-04-19)
 
 ### Ci
@@ -13,6 +42,16 @@
 * ci: fix mypy errors ([`eb66223`](https://github.com/LedgerInvesting/bayesblend/commit/eb66223dbd6d3d57c4c3baf7d0641f30d94aa65c))
 
 ### Documentation
+
+* docs(simulation.md): Baye&#39;s -&gt; Bayes&#39; ([`0067930`](https://github.com/LedgerInvesting/bayesblend/commit/0067930697e1b758f6740807c90bfd9492de0d2d))
+
+* docs(simulation.md): use z, not k ([`b2bc721`](https://github.com/LedgerInvesting/bayesblend/commit/b2bc7211fd0e773f0a71f019a55fc3e59e66f101))
+
+* docs: grammar
+
+Co-authored-by: Nathaniel Haines &lt;nathaniel.b.haines@gmail.com&gt; ([`30b483e`](https://github.com/LedgerInvesting/bayesblend/commit/30b483ea73889c37d539693d942520826090c4dc))
+
+* docs: fix PMP calculation ([`2685c03`](https://github.com/LedgerInvesting/bayesblend/commit/2685c038f5b08b47ed0cda67c0e4cc489f19715e))
 
 * docs: fix marginal likelihood in blending.md ([`a54a442`](https://github.com/LedgerInvesting/bayesblend/commit/a54a442c75bd36ba7be0a4d8ad1adaf38f272845))
 
@@ -43,6 +82,10 @@ Previously, the Draws.from_lpd method was reshaping the lpd array by referencing
 * Merge pull request #35 from LedgerInvesting/fix-from-lpd-array-dim
 
 fix(io): allow multiple dimension lpd arrays in from_lpd method ([`c9aa90b`](https://github.com/LedgerInvesting/bayesblend/commit/c9aa90b82d1d912a982b8d6ad799fd528d015666))
+
+* correct mixture code ([`70048e3`](https://github.com/LedgerInvesting/bayesblend/commit/70048e30e7e99d6d70dc647275b38d6307886cd6))
+
+* Merge branch &#39;docs-add-pmp&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into docs-add-pmp ([`23957b5`](https://github.com/LedgerInvesting/bayesblend/commit/23957b5dea2d5a509259ee250350d234a8b556e4))
 
 * Merge pull request #33 from LedgerInvesting/docs-marginal-math
 
