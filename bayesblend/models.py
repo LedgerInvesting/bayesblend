@@ -514,11 +514,11 @@ class HierarchicalBayesStacking(BayesBlendModel):
         model_draws: As in the base `BayesBlendModel` class.
         discrete_covariates: Dictionary of covariate name and value pairs,
             where the value is a sequence with an element for each of the
-            cells/points contained in each model in `pointwise_diagnostics`. Dummy
+            cells/points contained in each model in `model_draws`. Dummy
             codes are generated automatically.
         continuous_covariates: Dictionary of covariate name and value pairs,
             where the value is a sequence with an element for each of the
-            cells/points contained in each model in `pointwise_diagnostics`. Values
+            cells/points contained in each model in `model_draws`. Values
             are entered as input to the hierarchical stacking model as-is.
         continuous_covariates_transform: The type of transform to use for
             continuous covariates. Must be one of CONTINUOUS_TRANSFORMS
@@ -990,7 +990,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
 class PseudoBma(BayesBlendModel):
     """Subclass to compute model weights by pseudo Bayesian model averaging (pseudo-BMA).
 
-    This method computes information criteria (IC) from the pointwise diagnostics,
+    This method computes information criteria (IC) from the log pointwise densities,
     and IC weights are then derived by a simple rescaling procedure
     (computing the differences between each IC and the maximum IC) and running the
     rescaled values through a softmax function. This procedure is referred to as
