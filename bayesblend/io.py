@@ -23,8 +23,8 @@ class Draws:
             dimension so long as the first dimenion is the MCMC/posterior sample index.
 
     Yields:
-        Iterating over Draws objects will return {"log_lik": array} and
-            {"post_pred": array} attributes for convenience.
+        Iterating over Draws objects will return {"log_lik": np.array} and
+            {"post_pred": np.array} attributes for convenience.
     """
 
     log_lik: np.ndarray | None = None
