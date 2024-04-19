@@ -2,6 +2,25 @@
 
 
 
+## v0.0.7 (2024-04-19)
+
+### Ci
+
+* ci: fix pypi release github action ([`3e2c525`](https://github.com/LedgerInvesting/bayesblend/commit/3e2c525fef42e56c162230099fd2b06b63903c81))
+
+### Fix
+
+* fix: docstring update
+
+updating docstring to kick off ci release ([`3790430`](https://github.com/LedgerInvesting/bayesblend/commit/379043049a32a211a5b07bf36b10ec2a57c0698e))
+
+### Unknown
+
+* Merge pull request #39 from LedgerInvesting/ci-pypi-release
+
+ci: pypi release ([`5cd4bb6`](https://github.com/LedgerInvesting/bayesblend/commit/5cd4bb6c87908ae0f9abf800b33069714e5c3239))
+
+
 ## v0.0.6 (2024-04-19)
 
 ### Ci
