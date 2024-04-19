@@ -52,27 +52,30 @@ mixture_string = """
     }
 
     transformed parameters {
-        matrix[N, K] lps;
+        vector[K] lps = log(w);
 
         for(i in 1:N) {
-            lps[i] = [
-                log(w[1]) + normal_lpdf(y[i] | alpha[1] + beta[1] * X[i,1], 1),
-                log(w[2]) + normal_lpdf(y[i] | alpha[2] + beta[2] * X[i,2], 1),
-                log(w[3]) + normal_lpdf(y[i] | alpha[3] + X[i] * beta[3:], 1)
-            ];
+            lps = [
+                lps[1] + normal_lpdf(y[i] | alpha[1] + beta[1] * X[i,1], 1),
+                lps[2] + normal_lpdf(y[i] | alpha[2] + beta[2] * X[i,2], 1),
+                lps[3] + normal_lpdf(y[i] | alpha[3] + X[i] * beta[3:], 1)
+            ]';
         }
     }
 
     model {
         alpha ~ std_normal();
         beta ~ std_normal();
-
-        for(i in 1:N)
-            target += log_sum_exp(lps[i]);
+        target += log_sum_exp(lps);
     }
 
     generated quantities {
         matrix[N_tilde, K] log_lik;
+        simplex[K] pmp;
+
+        for(k in 1:K) pmp[k] = exp(
+            lps[k] - log_sum_exp(lps)
+        );
 
         for(j in 1:N_tilde) {
             log_lik[j] = [
@@ -191,7 +194,7 @@ def blend(mixture, regressions):
 
     mix = bb.SimpleBlend(
         {f"fit{i}": bb.Draws(log_lik=mixture.log_lik[..., i]) for i in range(K)},
-        weights={f"fit{i}": w for i, w in enumerate(mixture.w.T)},
+        weights={f"fit{i}": w for i, w in enumerate(mixture.pmp.T)},
     )
     mix_blend = mix.predict()
 
