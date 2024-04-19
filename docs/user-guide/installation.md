@@ -12,5 +12,3 @@ from Github using:
 ```bash
 pip install git+ssh://git@github.com/LedgerInvesting/bayesblend.git
 ```
-
-[TODO: release to PyPi]
