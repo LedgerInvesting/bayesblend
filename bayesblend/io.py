@@ -67,9 +67,7 @@ class Draws:
         return (
             self.log_lik.shape
             if self.log_lik is not None
-            else self.post_pred.shape
-            if self.post_pred is not None
-            else ()
+            else self.post_pred.shape if self.post_pred is not None else ()
         )
 
     @cached_property
@@ -140,8 +138,8 @@ class Draws:
 
     @classmethod
     def from_lpd(cls, lpd: np.ndarray, post_pred: np.ndarray | None = None) -> Draws:
-        shape = (1, len(lpd)) if post_pred is None else post_pred.shape
-        lpd_full = np.full(shape, lpd.reshape((1, len(lpd))))
+        shape = (1, *lpd.shape) if post_pred is None else post_pred.shape
+        lpd_full = np.full(shape, lpd.reshape((1, *lpd.shape)))
         return cls(log_lik=lpd_full, post_pred=post_pred)
 
     def to_arviz(self, dims: Tuple[int, int, int] | None = None) -> az.InferenceData:
