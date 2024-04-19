@@ -203,7 +203,7 @@ We can use Stan to fit the implied mixture model between candidate models.
 In the generated quantities section, we evaluate the log predictive
 densities on `y_tilde` from each model separately, $\log{p(\tilde{y} \mid M_{k})}$,
 not accounting for the weights at this time. We also derive the posterior
-model probabilities using Baye's rule in the generated quantities (see
+model probabilities using Bayes' rule in the generated quantities (see
 the Stan manual entry on [Finite mixtures](
 https://mc-stan.org/docs/stan-users-guide/finite-mixtures.html#recovering-posterior-mixture-proportions
 ). The weights are applied using
