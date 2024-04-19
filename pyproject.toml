@@ -2,7 +2,10 @@
 name = "bayesblend"
 version = "0.0.5"
 description = "Easily combine predictions from multiple Bayesian models using techniques including (pseudo) Bayesian model averaging, hierarchical stacking, and more!"
-authors = ["Your Name <you@example.com>"]
+authors = [
+    "Nathaniel Haines <nathaniel.haines@ledgerinvesting.com>",
+    "Conor Goold <conor@ledgerinvesting.com>",
+]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -47,7 +50,7 @@ tag_format = "v{version}"
 version_toml = ["pyproject.toml:tool.poetry.version"]
 version_variables = ["bayesblend/__init__.py:__version__"]
 branch = "main"
-upload_to_pypi = false
+upload_to_pypi = true
 upload_to_release = true
 build_command = "pip install poetry && poetry build"
 
