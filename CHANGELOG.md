@@ -2,6 +2,79 @@
 
 
 
+## v0.0.5 (2024-04-19)
+
+### Ci
+
+* ci: run ruff ([`4e35161`](https://github.com/LedgerInvesting/bayesblend/commit/4e35161d5ef5239d6403156bd35052f20beaea79))
+
+* ci: fix mypy ([`f1a50d3`](https://github.com/LedgerInvesting/bayesblend/commit/f1a50d34adb855921b061c8b666366d2902e5fb3))
+
+* ci: fix mypy errors ([`eb66223`](https://github.com/LedgerInvesting/bayesblend/commit/eb66223dbd6d3d57c4c3baf7d0641f30d94aa65c))
+
+### Documentation
+
+* docs: fix marginal likelihood in blending.md ([`a54a442`](https://github.com/LedgerInvesting/bayesblend/commit/a54a442c75bd36ba7be0a4d8ad1adaf38f272845))
+
+* docs: clarify the mixture model definition, fix index link ([`40926fa`](https://github.com/LedgerInvesting/bayesblend/commit/40926fa83b00f6b5dec2f3abc89552058aedd243))
+
+* docs: address Nate&#39;s comments ([`982febe`](https://github.com/LedgerInvesting/bayesblend/commit/982febebc393e3d637aea6d93f4aa116b851e285))
+
+* docs: misc grammar ([`2eead4b`](https://github.com/LedgerInvesting/bayesblend/commit/2eead4b92de2cbceb1ea3a2470d16296effc88c2))
+
+* docs: refine example results section &amp; intro, rework the overview page ([`e371b12`](https://github.com/LedgerInvesting/bayesblend/commit/e371b12050f8b94dceca53e9362f8f5514e46030))
+
+* docs: first draft of example reworked ([`78ae519`](https://github.com/LedgerInvesting/bayesblend/commit/78ae519da3b833c455fc27c12d44fc646a122f67))
+
+* docs: rework intro ([`ab6c86d`](https://github.com/LedgerInvesting/bayesblend/commit/ab6c86db470a162c5fa3a67fadb5d0c59986ea3d))
+
+### Fix
+
+* fix(io): allow multiple dimension lpd arrays in from_lpd method
+
+Previously, the Draws.from_lpd method was reshaping the lpd array by referencing it&#39;s length, but this failed when the array had multiple dimensions. This fix reshapes by the lpd shape, allowing multiple dimensions in the lpd array (so long as they match the dimension of the post_pred array) ([`40398ca`](https://github.com/LedgerInvesting/bayesblend/commit/40398ca43014d2562c90ebd65aebc6c3b0835a4d))
+
+### Refactor
+
+* refactor: sum of weights are checked elsewhere ([`39e83dd`](https://github.com/LedgerInvesting/bayesblend/commit/39e83dd43229b62d57ffabe0e18561c2436b850c))
+
+### Unknown
+
+* Merge pull request #35 from LedgerInvesting/fix-from-lpd-array-dim
+
+fix(io): allow multiple dimension lpd arrays in from_lpd method ([`c9aa90b`](https://github.com/LedgerInvesting/bayesblend/commit/c9aa90b82d1d912a982b8d6ad799fd528d015666))
+
+* Merge pull request #33 from LedgerInvesting/docs-marginal-math
+
+docs: fix marginal likelihood in blending.md ([`d1d690a`](https://github.com/LedgerInvesting/bayesblend/commit/d1d690a872aa1a91928d9500f9349e958558e8e8))
+
+* Merge pull request #32 from LedgerInvesting/docs-clarify-simulation-example
+
+docs: additional clarifications to `user-guide/simulation.md` ([`da5b2cf`](https://github.com/LedgerInvesting/bayesblend/commit/da5b2cfb1775fe252cf0502d2a92efbd1f2378e3))
+
+* Merge pull request #29 from LedgerInvesting/docs-rework-examples
+
+docs: rework examples ([`7986b89`](https://github.com/LedgerInvesting/bayesblend/commit/7986b89b0c41f8ac71263c9e1b59907461ac5632))
+
+* Merge branch &#39;main&#39; of git+ssh://github.com/LedgerInvesting/bayesblend into docs-rework-examples ([`53c2448`](https://github.com/LedgerInvesting/bayesblend/commit/53c2448b8b1f92dcd388ce1bfa694e401003c78b))
+
+* Merge pull request #31 from LedgerInvesting/feature-simple-blend-model
+
+feature: simple blend model ([`e56f10f`](https://github.com/LedgerInvesting/bayesblend/commit/e56f10fff3b832c390eb70f53451fd0d9bed59a3))
+
+* tests: remove test to check weights sum to 1 ([`501974e`](https://github.com/LedgerInvesting/bayesblend/commit/501974ec563202d9432e965bf7ab16f2886cecae))
+
+* Merge branch &#39;feature-simple-blend-model&#39; into docs-rework-examples ([`932b404`](https://github.com/LedgerInvesting/bayesblend/commit/932b4048a16469b8ad00e9ee682f53530a35b9f8))
+
+* Merge branch &#39;feature-static-blend-model&#39; into docs-rework-examples ([`8aa48ba`](https://github.com/LedgerInvesting/bayesblend/commit/8aa48ba52a4a469faae4cbe3ac42191ab8a6da20))
+
+* feature(models): Add SimpleBlend class.
+
+Adds the SimpleBlend class so users can blend with their own weights. ([`b8b732c`](https://github.com/LedgerInvesting/bayesblend/commit/b8b732c1f983475bc33a2b09f48db5a67ae4ee0c))
+
+* update simulation.py ([`1100396`](https://github.com/LedgerInvesting/bayesblend/commit/1100396ec1a736516c6401db1c4a594e0f2d2604))
+
+
 ## v0.0.4 (2024-04-11)
 
 ### Ci
@@ -19,6 +92,10 @@
 * ci: add workflow badge to readme ([`db4634b`](https://github.com/LedgerInvesting/bayesblend/commit/db4634b91068f7bb296512dcd23b521095ba1d7c))
 
 ### Documentation
+
+* docs: update script ([`d3443b2`](https://github.com/LedgerInvesting/bayesblend/commit/d3443b2f381165424617cf05ea3c20aeac348c04))
+
+* docs: update simulation script ([`e06b536`](https://github.com/LedgerInvesting/bayesblend/commit/e06b536504cb0fe4dffc72c547978ef9bfd462dd))
 
 * docs: clarify model averaging throughout
 
