@@ -1,18 +1,18 @@
 import copy
 import json
 from functools import lru_cache
-import arviz as az
 
+import arviz as az
 import numpy as np
 import pytest
 from cmdstanpy import CmdStanModel
 
 from bayesblend import (
-    SimpleBlend,
     BayesStacking,
     HierarchicalBayesStacking,
     MleStacking,
     PseudoBma,
+    SimpleBlend,
 )
 from bayesblend.io import Draws
 
@@ -509,6 +509,17 @@ def test_models_from_lpd():
     # not the logmeanexp
     lpds = {name: fit.log_lik.mean(axis=0) for name, fit in MODEL_DRAWS.items()}
     post_preds = {name: fit.post_pred for name, fit in MODEL_DRAWS.items()}
+    assert MleStacking.from_lpd(lpds, post_preds)
+
+
+def test_model_from_lpd_3d():
+    model_draws = {
+        "fit1": make_draws(-1, [0.9, 0.1], shape=(100, 10, 10)),
+        "fit2": make_draws(-1.3, [0.8, 0.2], shape=(100, 10, 10)),
+        "fit3": make_draws(-1.7, [0.7, 0.3], shape=(100, 10, 10)),
+    }
+    lpds = {name: fit.log_lik.mean(axis=0) for name, fit in model_draws.items()}
+    post_preds = {name: fit.post_pred for name, fit in model_draws.items()}
     assert MleStacking.from_lpd(lpds, post_preds)
 
 
