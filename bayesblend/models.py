@@ -706,7 +706,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
                 continuous_covariates = plus | minus
 
         discrete_covariate_info = (
-            {key: v for key, v in covariate_info.items() if isinstance(v, set)}
+            {key: v for key, v in covariate_info.items() if isinstance(v, list)}
             if covariate_info is not None
             else None
         )
@@ -734,12 +734,8 @@ class HierarchicalBayesStacking(BayesBlendModel):
         continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> CovariateInfo:
 
-        def unique(x):
-            seen = set()
-            return [i for i in x if not (i in seen or seen.add(i))]
-
         discrete_covariate_set = (
-            {k: unique(v) for k, v in discrete_covariates.items()}
+            {k: _unique(v) for k, v in discrete_covariates.items()}
             if discrete_covariates is not None
             else {}
         )
@@ -1112,6 +1108,7 @@ def _make_dummy_vars(
     new_levels_df = pd.DataFrame()
 
     if discrete_covariate_info is not None:
+        new_levels_cache = [level for k, v in discrete_covariates.items() for level in _unique([k + "_" + level for level in v])]
         unique_levels_info = set().union(*list(discrete_covariate_info.values()))
         unique_levels_data = set().union(*list(discrete_covariates.values()))
         has_missing_levels = unique_levels_info - unique_levels_data
@@ -1137,8 +1134,10 @@ def _make_dummy_vars(
                         1 if v == level else 0 for v in discrete_covariates[covariate]
                     ]
                     new_level_dummys[new_covariate] = dummy_codes
+            
+            ordered_new_level_dummys = {k: new_level_dummys[k] for k in new_levels_cache if k in new_level_dummys}
 
-            new_levels_df = pd.DataFrame(new_level_dummys)
+            new_levels_df = pd.DataFrame(ordered_new_level_dummys)
 
         # if levels are missing, append dummy df to end of data df, assign dummy
         # variables, and then remove appended dummy df from result. This way,
@@ -1156,16 +1155,11 @@ def _make_dummy_vars(
             ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))
 
             dummy_coded_df = pd.get_dummies(
-                pd.concat([pd.DataFrame(discrete_covariates), missing_level_df]),
-                drop_first=True,
-                ).iloc[:-len(missing_level_df)]
-
-            dummy_coded_df2 = pd.get_dummies(
                 concat_all_covariates,
                 drop_first=True,
-                ).iloc[len(missing_level_df):]
+            ).iloc[len(missing_level_df):]
 
-            clean_dummies = pd.concat([dummy_coded_df2.drop(new_levels_df.columns, axis=1), new_levels_df], axis=1)
+            clean_dummies = pd.concat([dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df], axis=1)
             return clean_dummies.to_dict("list")
 
     return pd.concat(
@@ -1193,7 +1187,9 @@ def _normalize_weights(weights: np.ndarray):
     """Normalize weights due to rounding error, witch strict value check"""
     if not np.isclose(sum(weights), 1, atol=1e-7):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
-                drop=concat_df.columns[0],
-                drop=concat_df.columns[0],
-                drop=concat_df.columns[0],
     return np.array([max(0, w) for w in weights / sum(weights)])
+
+def _unique(x):
+    seen = set()
+    return [i for i in x if not (i in seen or seen.add(i))]
+

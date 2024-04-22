@@ -297,6 +297,8 @@ def test_make_dummy_vars_new_levels():
     assert dummies["dummy_group99"] == [0, 0, 0, 0, 1, 1]
 
 
+
+
 def test_hier_bayes_stacking_predict_different_covariate_levels_pooling():
     hier_bayes_stacking = hierarchical_bayes_stacking_pooling()
     # covariate name is the same, but there is a new level
