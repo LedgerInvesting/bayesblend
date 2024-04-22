@@ -15,6 +15,7 @@ from bayesblend import (
     SimpleBlend,
 )
 from bayesblend.io import Draws
+from bayesblend.models import _make_dummy_vars
 
 STAN_FILE = "test/stan_files/bernoulli_ppc.stan"
 DATA_FILE = "test/stan_data/bernoulli_data.json"
@@ -279,6 +280,22 @@ def test_hier_bayes_stacking_pooling():
     # check shape of model prior parameters
     assert all(model_coefs[par].shape == (1, n_models - 1) for par in prior_pars)
 
+def test_make_dummy_vars_new_levels():
+    discrete_covariate_info = hierarchical_bayes_stacking_pooling().covariate_info
+
+    one_new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
+    dummies = _make_dummy_vars(one_new_level, discrete_covariate_info) 
+    assert list(dummies.keys()) == ["dummy_group2", "dummy_group99"]
+    assert not all(dummies["dummy_group2"])
+    assert dummies["dummy_group99"] == [0, 0, 1, 1]
+
+    two_new_levels = {"dummy": ["group1"] * 2 + ["group0"] * 2 + ["group99"] * 2}
+    dummies = _make_dummy_vars(two_new_levels, discrete_covariate_info) 
+    assert list(dummies.keys()) == ["dummy_group2", "dummy_group0", "dummy_group99"]
+    assert not all(dummies["dummy_group2"])
+    assert dummies["dummy_group0"] == [0, 0, 1, 1, 0, 0]
+    assert dummies["dummy_group99"] == [0, 0, 0, 0, 1, 1]
+
 
 def test_hier_bayes_stacking_predict_different_covariate_levels_pooling():
     hier_bayes_stacking = hierarchical_bayes_stacking_pooling()
@@ -286,6 +303,10 @@ def test_hier_bayes_stacking_predict_different_covariate_levels_pooling():
     one_new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     with pytest.warns(UserWarning):
         hier_bayes_stacking._predict_weights(discrete_covariates=one_new_level)
+
+    one_new_level_prev_index = {"dummy": ["group0"] * 2 + ["group1"] * 2}
+    with pytest.warns(UserWarning):
+        hier_bayes_stacking._predict_weights(discrete_covariates=one_new_level_prev_index)
 
     two_new_levels = {"dummy": ["group1"] * 2 + ["group99"] * 2 + ["group98"] * 2}
     with pytest.warns(UserWarning):

@@ -733,8 +733,13 @@ class HierarchicalBayesStacking(BayesBlendModel):
         discrete_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> CovariateInfo:
+
+        def unique(x):
+            seen = set()
+            return [i for i in x if not (i in seen or seen.add(i))]
+
         discrete_covariate_set = (
-            {k: set(v) for k, v in discrete_covariates.items()}
+            {k: unique(v) for k, v in discrete_covariates.items()}
             if discrete_covariates is not None
             else {}
         )
@@ -1145,16 +1150,23 @@ def _make_dummy_vars(
                     for k, v in (discrete_covariates | discrete_covariate_info).items()
                 }
             ).ffill()
+			
+            concat_all_covariates = pd.concat(
+                [missing_level_df, pd.DataFrame(discrete_covariates)]
+            ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))
 
             dummy_coded_df = pd.get_dummies(
                 pd.concat([pd.DataFrame(discrete_covariates), missing_level_df]),
                 drop_first=True,
-            ).iloc[: -len(missing_level_df)]
+                ).iloc[:-len(missing_level_df)]
 
-            return pd.concat(
-                [dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df],
-                axis=1,
-            ).to_dict("list")
+            dummy_coded_df2 = pd.get_dummies(
+                concat_all_covariates,
+                drop_first=True,
+                ).iloc[len(missing_level_df):]
+
+            clean_dummies = pd.concat([dummy_coded_df2.drop(new_levels_df.columns, axis=1), new_levels_df], axis=1)
+            return clean_dummies.to_dict("list")
 
     return pd.concat(
         [
@@ -1181,4 +1193,7 @@ def _normalize_weights(weights: np.ndarray):
     """Normalize weights due to rounding error, witch strict value check"""
     if not np.isclose(sum(weights), 1, atol=1e-7):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
+                drop=concat_df.columns[0],
+                drop=concat_df.columns[0],
+                drop=concat_df.columns[0],
     return np.array([max(0, w) for w in weights / sum(weights)])
