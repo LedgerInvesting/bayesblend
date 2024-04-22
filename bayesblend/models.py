@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
+from typing import Any, Dict, Hashable, List, Literal, Sequence, Tuple, Union
 
 import arviz as az
 import numpy as np
@@ -41,7 +41,7 @@ ContinuousTransforms = Literal["identity", "standardize", "relu"]
 
 CONTINUOUS_TRANSFORMS = list(typing.get_args(ContinuousTransforms))
 
-CovariateInfo = Dict[str, Union[Set[Any], Dict[str, float]]]
+CovariateInfo = Dict[str, Union[List[Any], Dict[str, float]]]
 
 Weights = Dict[str, np.ndarray]
 
@@ -733,7 +733,6 @@ class HierarchicalBayesStacking(BayesBlendModel):
         discrete_covariates: Dict[str, Sequence] | None = None,
         continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> CovariateInfo:
-
         discrete_covariate_set = (
             {k: _unique(v) for k, v in discrete_covariates.items()}
             if discrete_covariates is not None
@@ -1100,7 +1099,7 @@ def _compute_weights(x: np.ndarray, rescaler: float = 1) -> List[float]:
 
 def _make_dummy_vars(
     discrete_covariates: Dict[str, Sequence] | None = None,
-    discrete_covariate_info: Dict[str, Set[Any]] | None = None,
+    discrete_covariate_info: Dict[str, List[Any]] | None = None,
 ) -> Dict[Hashable, Sequence]:
     if discrete_covariates is None:
         return {}
@@ -1108,7 +1107,11 @@ def _make_dummy_vars(
     new_levels_df = pd.DataFrame()
 
     if discrete_covariate_info is not None:
-        new_levels_cache = [level for k, v in discrete_covariates.items() for level in _unique([k + "_" + level for level in v])]
+        new_levels_cache = [
+            level
+            for k, v in discrete_covariates.items()
+            for level in _unique([k + "_" + level for level in v])
+        ]
         unique_levels_info = set().union(*list(discrete_covariate_info.values()))
         unique_levels_data = set().union(*list(discrete_covariates.values()))
         has_missing_levels = unique_levels_info - unique_levels_data
@@ -1134,8 +1137,12 @@ def _make_dummy_vars(
                         1 if v == level else 0 for v in discrete_covariates[covariate]
                     ]
                     new_level_dummys[new_covariate] = dummy_codes
-            
-            ordered_new_level_dummys = {k: new_level_dummys[k] for k in new_levels_cache if k in new_level_dummys}
+
+            ordered_new_level_dummys = {
+                k: new_level_dummys[k]
+                for k in new_levels_cache
+                if k in new_level_dummys
+            }
 
             new_levels_df = pd.DataFrame(ordered_new_level_dummys)
 
@@ -1149,17 +1156,20 @@ def _make_dummy_vars(
                     for k, v in (discrete_covariates | discrete_covariate_info).items()
                 }
             ).ffill()
-			
+
             concat_all_covariates = pd.concat(
                 [missing_level_df, pd.DataFrame(discrete_covariates)]
-            ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))
+            ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))  # type: ignore
 
             dummy_coded_df = pd.get_dummies(
                 concat_all_covariates,
                 drop_first=True,
-            ).iloc[len(missing_level_df):]
+            ).iloc[len(missing_level_df) :]
 
-            clean_dummies = pd.concat([dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df], axis=1)
+            clean_dummies = pd.concat(
+                [dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df],
+                axis=1,
+            )
             return clean_dummies.to_dict("list")
 
     return pd.concat(
@@ -1189,7 +1199,7 @@ def _normalize_weights(weights: np.ndarray):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
     return np.array([max(0, w) for w in weights / sum(weights)])
 
-def _unique(x):
-    seen = set()
-    return [i for i in x if not (i in seen or seen.add(i))]
 
+def _unique(x: List[Any] | Sequence[Any]) -> List:
+    seen = set()
+    return [i for i in x if not (i in seen or seen.add(i))]  # type: ignore
