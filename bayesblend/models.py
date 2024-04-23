@@ -1105,17 +1105,33 @@ def _make_dummy_vars(
         return {}
 
     new_levels_df = pd.DataFrame()
+    levels_cache = [
+        level
+        for k, v in discrete_covariates.items()
+        for level in _unique([k + "_" + level for level in v])
+    ]
+    intercepts = [
+        k + "_" + v[0]
+        for k, v in (
+            discrete_covariates.items()
+            if discrete_covariate_info is None
+            else discrete_covariate_info.items()
+        )
+    ]
 
     if discrete_covariate_info is not None:
-        new_levels_cache = [
-            level
-            for k, v in discrete_covariates.items()
-            for level in _unique([k + "_" + level for level in v])
-        ]
-        unique_levels_info = set().union(*list(discrete_covariate_info.values()))
-        unique_levels_data = set().union(*list(discrete_covariates.values()))
-        has_missing_levels = unique_levels_info - unique_levels_data
-        has_new_levels = unique_levels_data - unique_levels_info
+        unique_levels_info = {
+            k: set().union(v)
+            for k, v
+            in discrete_covariate_info.items()
+        }
+        unique_levels_data = {
+            k: set().union(v)
+            for k, v
+            in discrete_covariates.items()
+        }
+        has_missing_levels = {k: unique_levels_info[k] - unique_levels_data[k] for k in unique_levels_info}
+        has_new_levels = {k: unique_levels_data[k] - unique_levels_info[k] for k in unique_levels_data}
 
         # We create dummy coded columns here and append them to the end of the
         # dataframe so that we later know which columns did not originally
@@ -1140,7 +1156,7 @@ def _make_dummy_vars(
 
             ordered_new_level_dummys = {
                 k: new_level_dummys[k]
-                for k in new_levels_cache
+                for k in levels_cache
                 if k in new_level_dummys
             }
 
@@ -1162,9 +1178,8 @@ def _make_dummy_vars(
             ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))  # type: ignore
 
             dummy_coded_df = pd.get_dummies(
-                concat_all_covariates,
-                drop_first=True,
-            ).iloc[len(missing_level_df) :]
+                concat_all_covariates, dtype=int
+            ).drop(intercepts, axis=1).iloc[len(missing_level_df) :]
 
             clean_dummies = pd.concat(
                 [dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df],
@@ -1172,15 +1187,8 @@ def _make_dummy_vars(
             )
             return clean_dummies.to_dict("list")
 
-    return pd.concat(
-        [
-            pd.get_dummies(
-                pd.DataFrame(discrete_covariates), drop_first=True, dtype=int
-            ),
-            new_levels_df,
-        ],
-        axis=1,
-    ).to_dict("list")
+    dummies = pd.get_dummies(pd.DataFrame(discrete_covariates), dtype=int).drop(intercepts, axis=1)
+    return pd.concat([dummies, new_levels_df], axis=1).to_dict("list")
 
 
 def _concat_array_empty(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray:
