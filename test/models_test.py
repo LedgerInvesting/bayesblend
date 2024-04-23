@@ -309,6 +309,19 @@ def test_make_dummy_vars_new_levels():
     assert dummies["dummy_group0"] == [0, 0, 1, 1, 0, 0]
     assert dummies["dummy_group99"] == [0, 0, 0, 0, 1, 1]
 
+    train = {"dummy": ["group1"] * 3 + ["group10"] * 2}
+    test = {"dummy": ["group1"] * 1 + ["group01"] * 2}
+    dummies = _make_dummy_vars(train)
+    test_dummies = _make_dummy_vars(
+        test,
+        {"dummy": ["group1", "group10"]},
+    )
+
+    assert dummies["dummy_group10"] == [0, 0, 0, 1, 1]
+    assert list(test_dummies.keys()) == ["dummy_group10", "dummy_group01"]
+    assert test_dummies["dummy_group10"] == [0, 0, 0]
+    assert test_dummies["dummy_group01"] == [0, 1, 1]
+
 def test_make_dummy_vars_new_levels_two_covariates():
     discrete_covariate_info = hierarchical_bayes_stacking_pooling_two_discrete_covariates().covariate_info
 

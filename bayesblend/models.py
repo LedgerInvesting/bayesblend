@@ -1187,7 +1187,10 @@ def _make_dummy_vars(
             )
             return clean_dummies.to_dict("list")
 
-    dummies = pd.get_dummies(pd.DataFrame(discrete_covariates), dtype=int).drop(intercepts, axis=1)
+    covariate_df = pd.DataFrame(discrete_covariates).apply(
+        lambda i: pd.Categorical(i, categories=i.unique(), ordered=True) # type: ignore
+    )
+    dummies = pd.get_dummies(covariate_df, dtype=int).drop(intercepts, axis=1)
     return pd.concat([dummies, new_levels_df], axis=1).to_dict("list")
 
 
