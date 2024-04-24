@@ -2,6 +2,34 @@
 
 
 
+## v0.0.8 (2024-04-24)
+
+### Fix
+
+* fix: mypy and ruff ([`b327c19`](https://github.com/LedgerInvesting/bayesblend/commit/b327c190596ff9dfa26cb2195fc2757d0d41e814))
+
+* fix: discrete_covariate_info is a list not a set ([`c64bcd5`](https://github.com/LedgerInvesting/bayesblend/commit/c64bcd55d0f689ef6b2323c854aa22aad355a722))
+
+* fix(models): Fix _make_dummy_vars when new levels are passed.
+
+_make_dummy_vars was failing when new levels were passed because
+the new dummy_coded_df didn&#39;t always contain the new values
+due to Python&#39;s string ordering behaviour. Additionally,
+`discrete_covariate_set` was a set of values, and therefore
+we could not ensure these were consistent with the order of
+appearance in the training data. ([`26b50fe`](https://github.com/LedgerInvesting/bayesblend/commit/26b50fe19c124f4d96a4a4612fcdbb33ed4de6dc))
+
+### Unknown
+
+* Merge pull request #41 from LedgerInvesting/fix-new-discrete-covariates
+
+fix: predicting on new discrete covariates levels ([`8308503`](https://github.com/LedgerInvesting/bayesblend/commit/83085036ae3714fc3ead7e49dd01635eb257c8d7))
+
+* ensure order is the same across training and pred dummies ([`9e52758`](https://github.com/LedgerInvesting/bayesblend/commit/9e5275862c2a15e80598001faea38395a23cadf6))
+
+* generalize to &gt; 1 discrete covariate ([`428f88a`](https://github.com/LedgerInvesting/bayesblend/commit/428f88a89537742ebbdab40df868fd411a1889f0))
+
+
 ## v0.0.7 (2024-04-19)
 
 ### Ci
