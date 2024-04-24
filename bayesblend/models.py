@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Dict, Hashable, List, Literal, Sequence, Set, Tuple, Union
+from typing import Any, Dict, Hashable, List, Literal, Sequence, Tuple, Union
 
 import arviz as az
 import numpy as np
@@ -41,7 +41,7 @@ ContinuousTransforms = Literal["identity", "standardize", "relu"]
 
 CONTINUOUS_TRANSFORMS = list(typing.get_args(ContinuousTransforms))
 
-CovariateInfo = Dict[str, Union[Set[Any], Dict[str, float]]]
+CovariateInfo = Dict[str, Union[List[Any], Dict[str, float]]]
 
 Weights = Dict[str, np.ndarray]
 
@@ -706,7 +706,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
                 continuous_covariates = plus | minus
 
         discrete_covariate_info = (
-            {key: v for key, v in covariate_info.items() if isinstance(v, set)}
+            {key: v for key, v in covariate_info.items() if isinstance(v, list)}
             if covariate_info is not None
             else None
         )
@@ -734,7 +734,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         continuous_covariates: Dict[str, Sequence] | None = None,
     ) -> CovariateInfo:
         discrete_covariate_set = (
-            {k: set(v) for k, v in discrete_covariates.items()}
+            {k: _unique(v) for k, v in discrete_covariates.items()}
             if discrete_covariates is not None
             else {}
         )
@@ -1099,18 +1099,39 @@ def _compute_weights(x: np.ndarray, rescaler: float = 1) -> List[float]:
 
 def _make_dummy_vars(
     discrete_covariates: Dict[str, Sequence] | None = None,
-    discrete_covariate_info: Dict[str, Set[Any]] | None = None,
+    discrete_covariate_info: Dict[str, List[Any]] | None = None,
 ) -> Dict[Hashable, Sequence]:
     if discrete_covariates is None:
         return {}
 
     new_levels_df = pd.DataFrame()
+    levels_cache = [
+        level
+        for k, v in discrete_covariates.items()
+        for level in _unique([k + "_" + level for level in v])
+    ]
+    intercepts = [
+        k + "_" + v[0]
+        for k, v in (
+            discrete_covariates.items()
+            if discrete_covariate_info is None
+            else discrete_covariate_info.items()
+        )
+    ]
 
     if discrete_covariate_info is not None:
-        unique_levels_info = set().union(*list(discrete_covariate_info.values()))
-        unique_levels_data = set().union(*list(discrete_covariates.values()))
-        has_missing_levels = unique_levels_info - unique_levels_data
-        has_new_levels = unique_levels_data - unique_levels_info
+        unique_levels_info = {
+            k: set().union(v)
+            for k, v
+            in discrete_covariate_info.items()
+        }
+        unique_levels_data = {
+            k: set().union(v)
+            for k, v
+            in discrete_covariates.items()
+        }
+        has_missing_levels = {k: unique_levels_info[k] - unique_levels_data[k] for k in unique_levels_info}
+        has_new_levels = {k: unique_levels_data[k] - unique_levels_info[k] for k in unique_levels_data}
 
         # We create dummy coded columns here and append them to the end of the
         # dataframe so that we later know which columns did not originally
@@ -1133,7 +1154,13 @@ def _make_dummy_vars(
                     ]
                     new_level_dummys[new_covariate] = dummy_codes
 
-            new_levels_df = pd.DataFrame(new_level_dummys)
+            ordered_new_level_dummys = {
+                k: new_level_dummys[k]
+                for k in levels_cache
+                if k in new_level_dummys
+            }
+
+            new_levels_df = pd.DataFrame(ordered_new_level_dummys)
 
         # if levels are missing, append dummy df to end of data df, assign dummy
         # variables, and then remove appended dummy df from result. This way,
@@ -1146,25 +1173,25 @@ def _make_dummy_vars(
                 }
             ).ffill()
 
-            dummy_coded_df = pd.get_dummies(
-                pd.concat([pd.DataFrame(discrete_covariates), missing_level_df]),
-                drop_first=True,
-            ).iloc[: -len(missing_level_df)]
+            concat_all_covariates = pd.concat(
+                [missing_level_df, pd.DataFrame(discrete_covariates)]
+            ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))  # type: ignore
 
-            return pd.concat(
+            dummy_coded_df = pd.get_dummies(
+                concat_all_covariates, dtype=int
+            ).drop(intercepts, axis=1).iloc[len(missing_level_df) :]
+
+            clean_dummies = pd.concat(
                 [dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df],
                 axis=1,
-            ).to_dict("list")
+            )
+            return clean_dummies.to_dict("list")
 
-    return pd.concat(
-        [
-            pd.get_dummies(
-                pd.DataFrame(discrete_covariates), drop_first=True, dtype=int
-            ),
-            new_levels_df,
-        ],
-        axis=1,
-    ).to_dict("list")
+    covariate_df = pd.DataFrame(discrete_covariates).apply(
+        lambda i: pd.Categorical(i, categories=i.unique(), ordered=True) # type: ignore
+    )
+    dummies = pd.get_dummies(covariate_df, dtype=int).drop(intercepts, axis=1)
+    return pd.concat([dummies, new_levels_df], axis=1).to_dict("list")
 
 
 def _concat_array_empty(arrays: List[np.ndarray], axis: int = 0) -> np.ndarray:
@@ -1182,3 +1209,8 @@ def _normalize_weights(weights: np.ndarray):
     if not np.isclose(sum(weights), 1, atol=1e-7):
         raise ValueError(f"Weights do not sum to 1: {weights}.")
     return np.array([max(0, w) for w in weights / sum(weights)])
+
+
+def _unique(x: List[Any] | Sequence[Any]) -> List:
+    seen = set()
+    return [i for i in x if not (i in seen or seen.add(i))]  # type: ignore

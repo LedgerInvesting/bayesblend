@@ -67,7 +67,9 @@ class Draws:
         return (
             self.log_lik.shape
             if self.log_lik is not None
-            else self.post_pred.shape if self.post_pred is not None else ()
+            else self.post_pred.shape
+            if self.post_pred is not None
+            else ()
         )
 
     @cached_property
