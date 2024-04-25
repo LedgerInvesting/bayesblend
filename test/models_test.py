@@ -85,6 +85,7 @@ def hierarchical_bayes_stacking_pooling():
         seed=SEED,
     ).fit()
 
+
 @lru_cache
 def hierarchical_bayes_stacking_pooling_two_discrete_covariates():
     new_covariate = {}
@@ -96,6 +97,7 @@ def hierarchical_bayes_stacking_pooling_two_discrete_covariates():
         partial_pooling=True,
         seed=SEED,
     ).fit()
+
 
 @lru_cache
 def fit_models():
@@ -329,13 +331,21 @@ def test_make_dummy_vars_new_levels():
     assert test_dummies["dummy_group10"] == [0, 0, 0]
     assert test_dummies["dummy_group01"] == [0, 1, 1]
 
+
 def test_make_dummy_vars_new_levels_two_covariates():
-    discrete_covariate_info = hierarchical_bayes_stacking_pooling_two_discrete_covariates().covariate_info
+    discrete_covariate_info = (
+        hierarchical_bayes_stacking_pooling_two_discrete_covariates().covariate_info
+    )
 
     one_new_level = {"dummy": ["group1"] * 2 + ["group99"] * 2}
     one_new_level["dummy2"] = one_new_level["dummy"]
     dummies = _make_dummy_vars(one_new_level, discrete_covariate_info)
-    assert list(dummies.keys()) == ["dummy_group2", "dummy2_group2", "dummy_group99", "dummy2_group99"]
+    assert list(dummies.keys()) == [
+        "dummy_group2",
+        "dummy2_group2",
+        "dummy_group99",
+        "dummy2_group99",
+    ]
     assert not all(dummies["dummy_group2"]) and not all(dummies["dummy2_group2"])
     assert dummies["dummy_group99"] == [0, 0, 1, 1]
     assert dummies["dummy2_group99"] == [0, 0, 1, 1]

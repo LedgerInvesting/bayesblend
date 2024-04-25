@@ -860,7 +860,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         return self
 
     def _generate_new_level_coefficient(
-        self, idx: int, rng: np.random.RandomState
+        self, idx: int, rng: np.random.Generator
     ) -> np.ndarray:
         return np.atleast_2d(
             rng.normal(
