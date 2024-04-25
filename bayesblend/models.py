@@ -72,16 +72,19 @@ class BayesBlendModel(ABC):
         model_draws: Dictionary of Draws objects, each containing pointwise posteriors
             for the log likelihood and predictions of a given model. See bayesblend.Draws
             for details.
+        seed: Random number seed to use for model fitting.
     """
 
     def __init__(
         self,
         model_draws: Dict[str, Draws],
+        seed: int | None  = None,
     ) -> None:
         self.model_draws = model_draws
         self._coefficients: Dict[str, np.ndarray]
         self._weights: Weights
         self._model_info: Union[OptimizeResult, CmdStanMCMC] | None = None
+        self.seed = seed
 
     @abstractmethod
     def fit(self) -> BayesBlendModel:
@@ -167,12 +170,13 @@ class BayesBlendModel(ABC):
             weights: Dictionary of model-weight pairs to use for blending
                 `model_draws`. If left unspecified, blending will be done with
                 `self.weights`.
-            seed: Random number seed to blending arrays. Defaults to None.
+            seed: Random number seed to blending arrays. Defaults to None to use
+                the class's initialized seed.
 
         Returns:
             Draws object with blended draws (across models).
         """
-        rng = np.random.RandomState(seed)
+        rng = np.random.default_rng(self.seed if seed is None else seed)
 
         model_draws = model_draws if model_draws is not None else self.model_draws
         weights = weights if weights is not None else self.weights
@@ -347,15 +351,17 @@ class MleStacking(BayesBlendModel):
 
     Attributes:
         model_draws: As in the base `BayesBlendModel` class.
+        seed: Random number seed to use for model fitting.
     """
 
     def __init__(
         self,
         model_draws: Dict[str, Draws],
         optimizer_options: Dict[str, Any] | None = None,
+        seed: int | None = None,
     ) -> None:
         self.optimizer_options = optimizer_options
-        super().__init__(model_draws)
+        super().__init__(model_draws, seed)
 
     def _obj_fun(self, w, *args):
         """Negative sum of the weighted log predictive densities"""
@@ -434,7 +440,7 @@ class BayesStacking(BayesBlendModel):
         seed: int | None = None,
         **kwargs,
     ) -> None:
-        super().__init__(model_draws)
+        super().__init__(model_draws, seed=seed)
         self.cmdstan_control = (
             CMDSTAN_DEFAULTS
             if cmdstan_control is None
@@ -460,7 +466,6 @@ class BayesStacking(BayesBlendModel):
                 )
             self._priors = priors
 
-        self.seed = seed
         self.cmdstan_control["seed"] = self.seed
 
     def fit(self) -> BayesStacking:
@@ -596,6 +601,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
         cmdstan_control: Dict[str, Any] | None = None,
         seed: int | None = None,
     ) -> None:
+        super().__init__(model_draws, seed)
         if not discrete_covariates and not continuous_covariates:
             raise ValueError(
                 "`HierarchicalBayesStacking` requires specifying either `discrete_covariates` or `continuous_covariates` (or both)."
@@ -617,7 +623,6 @@ class HierarchicalBayesStacking(BayesBlendModel):
             if cmdstan_control is None
             else (cmdstan_control | CMDSTAN_DEFAULTS)
         )
-        self.seed = seed
         self.cmdstan_control["seed"] = self.seed
         # check if we have enough data for partial pooling to make sense
         n_discrete = (
@@ -646,7 +651,6 @@ class HierarchicalBayesStacking(BayesBlendModel):
             if unknown_priors:
                 raise ValueError(f"Unrecognized priors {unknown_priors}.")
 
-        super().__init__(model_draws)
 
     def _prepare_covariates(
         self,
@@ -884,7 +888,7 @@ class HierarchicalBayesStacking(BayesBlendModel):
             else 0
         )
 
-        rng = np.random.RandomState(seed=self.seed)
+        rng = np.random.default_rng(seed=self.seed)
 
         for i in range(N_MCMC):
             # generate new discrete covariate level coefficients from the
@@ -1026,8 +1030,7 @@ class PseudoBma(BayesBlendModel):
     ) -> None:
         self.bootstrap = bootstrap
         self.n_boots = n_boots
-        self.seed = seed
-        super().__init__(model_draws)
+        super().__init__(model_draws, seed)
 
     def _bb_weights(
         self, x: np.ndarray, alpha: Union[float, np.ndarray] = 1.0

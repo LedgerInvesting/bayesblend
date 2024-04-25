@@ -97,10 +97,9 @@ def hierarchical_bayes_stacking_pooling_two_discrete_covariates():
         seed=SEED,
     ).fit()
 
-
 @lru_cache
 def fit_models():
-    mle_stacking = MleStacking(model_draws=MODEL_DRAWS).fit()
+    mle_stacking = MleStacking(model_draws=MODEL_DRAWS, seed=SEED).fit()
     bayes_stacking = BayesStacking(model_draws=MODEL_DRAWS, seed=SEED).fit()
     hier_bayes_stacking = hierarchical_bayes_stacking()
     pseudo_bma = PseudoBma(
@@ -165,6 +164,14 @@ def test_model_blending_valid():
     assert isinstance(hier_bayes_stacking._blend(), Draws)
     assert isinstance(pseudo_bma._blend(), Draws)
     assert isinstance(pseudo_bma_plus._blend(), Draws)
+
+
+def test_model_blending_reproducible():
+    models = fit_models()
+
+    for model in models:
+        assert model.fit().weights == model.fit().weights
+        assert model.predict().lpd.sum() == model.predict().lpd.sum()
 
 
 def test_model_predictions_valid():
