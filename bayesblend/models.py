@@ -78,7 +78,7 @@ class BayesBlendModel(ABC):
     def __init__(
         self,
         model_draws: Dict[str, Draws],
-        seed: int | None  = None,
+        seed: int | None = None,
     ) -> None:
         self.model_draws = model_draws
         self._coefficients: Dict[str, np.ndarray]
@@ -651,7 +651,6 @@ class HierarchicalBayesStacking(BayesBlendModel):
             if unknown_priors:
                 raise ValueError(f"Unrecognized priors {unknown_priors}.")
 
-
     def _prepare_covariates(
         self,
         discrete_covariates: Dict[str, Sequence] | None = None,
@@ -1124,17 +1123,15 @@ def _make_dummy_vars(
 
     if discrete_covariate_info is not None:
         unique_levels_info = {
-            k: set().union(v)
-            for k, v
-            in discrete_covariate_info.items()
+            k: set().union(v) for k, v in discrete_covariate_info.items()
         }
-        unique_levels_data = {
-            k: set().union(v)
-            for k, v
-            in discrete_covariates.items()
+        unique_levels_data = {k: set().union(v) for k, v in discrete_covariates.items()}
+        has_missing_levels = {
+            k: unique_levels_info[k] - unique_levels_data[k] for k in unique_levels_info
         }
-        has_missing_levels = {k: unique_levels_info[k] - unique_levels_data[k] for k in unique_levels_info}
-        has_new_levels = {k: unique_levels_data[k] - unique_levels_info[k] for k in unique_levels_data}
+        has_new_levels = {
+            k: unique_levels_data[k] - unique_levels_info[k] for k in unique_levels_data
+        }
 
         # We create dummy coded columns here and append them to the end of the
         # dataframe so that we later know which columns did not originally
@@ -1158,9 +1155,7 @@ def _make_dummy_vars(
                     new_level_dummys[new_covariate] = dummy_codes
 
             ordered_new_level_dummys = {
-                k: new_level_dummys[k]
-                for k in levels_cache
-                if k in new_level_dummys
+                k: new_level_dummys[k] for k in levels_cache if k in new_level_dummys
             }
 
             new_levels_df = pd.DataFrame(ordered_new_level_dummys)
@@ -1180,9 +1175,11 @@ def _make_dummy_vars(
                 [missing_level_df, pd.DataFrame(discrete_covariates)]
             ).apply(lambda i: pd.Categorical(i, categories=i.unique(), ordered=True))  # type: ignore
 
-            dummy_coded_df = pd.get_dummies(
-                concat_all_covariates, dtype=int
-            ).drop(intercepts, axis=1).iloc[len(missing_level_df) :]
+            dummy_coded_df = (
+                pd.get_dummies(concat_all_covariates, dtype=int)
+                .drop(intercepts, axis=1)
+                .iloc[len(missing_level_df) :]
+            )
 
             clean_dummies = pd.concat(
                 [dummy_coded_df.drop(new_levels_df.columns, axis=1), new_levels_df],
@@ -1191,7 +1188,7 @@ def _make_dummy_vars(
             return clean_dummies.to_dict("list")
 
     covariate_df = pd.DataFrame(discrete_covariates).apply(
-        lambda i: pd.Categorical(i, categories=i.unique(), ordered=True) # type: ignore
+        lambda i: pd.Categorical(i, categories=i.unique(), ordered=True)  # type: ignore
     )
     dummies = pd.get_dummies(covariate_df, dtype=int).drop(intercepts, axis=1)
     return pd.concat([dummies, new_levels_df], axis=1).to_dict("list")

@@ -6,6 +6,7 @@ from .models import (
     PseudoBma,
 )
 from .io import Draws
+from .plot import plot_blends
 
 __version__ = "0.0.8"
 
@@ -16,4 +17,5 @@ __all__ = [
     "BayesStacking",
     "HierarchicalBayesStacking",
     "Draws",
+    "plot_blends",
 ]
