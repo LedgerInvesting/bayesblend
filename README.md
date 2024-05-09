@@ -4,6 +4,7 @@
 [![docs](https://readthedocs.com/projects/ledger-investing-bayesblend/badge/?version=latest)](https://ledger-investing-bayesblend.readthedocs-hosted.com/en/latest/?badge=latest)
 
 # BayesBlend
+<img src="https://github.com/LedgerInvesting/bayesblend/assets/4444492/25601bfa-1be0-46af-b670-2df829e33edb" width="300">
 
 BayesBlend provides an easy-to-use interface to combine predictions from multiple Bayesian models using techniques including (pseudo) Bayesian model averaging, hierarchical stacking, and more!
 
