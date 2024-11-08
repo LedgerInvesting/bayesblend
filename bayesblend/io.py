@@ -18,9 +18,9 @@ class Draws:
 
     Attributes:
         log_lik: Array of posterior log likelihood samples for a model. Can be any
-            dimension so long as the first dimenion is the MCMC/posterior sample index.
+            dimension so long as the first dimension is the MCMC/posterior sample index.
         post_pred: Array of posterior predictive samples from a model. Can be any
-            dimension so long as the first dimenion is the MCMC/posterior sample index.
+            dimension so long as the first dimension is the MCMC/posterior sample index.
 
     Yields:
         Iterating over Draws objects will return {"log_lik": np.array} and
